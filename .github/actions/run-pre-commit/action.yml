@@ -1,0 +1,35 @@
+name: 'Run Pre-commit Checks'
+description: 'Sets up Python, installs dependencies with pipenv, and runs pre-commit'
+name: 'Run Pre-commit Checks with Auto-fix'
+description: 'Sets up Python, installs dependencies, runs pre-commit, and auto-commits fixes.'
+
+# This defines the action as a "composite" action, meaning it runs a sequence of steps.
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pipenv'
+
+    - name: Install pipenv
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipenv
+
+    - name: Install project dependencies
+      shell: bash
+      run: pipenv install --dev
+
+    - name: Run pre-commit and apply fixes
+      shell: bash
+      run: pipenv run pre-commit run --all-files --show-diff-on-failure || true
+
+    - name: Commit and push changes
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "style: auto-fix with pre-commit"
+        commit_user_name: "github-actions[bot]"
+        commit_user_email: "github-actions[bot]@users.noreply.github.com"
