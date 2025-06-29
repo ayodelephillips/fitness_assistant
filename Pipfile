@@ -1,0 +1,27 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+scikit-learn = "1.6.1"
+pandas = "2.2.3"
+flask = "3.1.0"
+transformers = "4.51.0"
+tensorflow = "2.19.0"
+sentencepiece = "0.2.0"
+tf-keras = "2.19.0"
+hf-xet = "1.0.0"
+langchain = "*"
+openai = "*"
+langchain-community = "*"
+pre-commit = "*"
+
+[dev-packages]
+tqdm = "*"
+notebook = "==7.1.2"
+ipywidgets = "*"
+wget = "*"
+
+[requires]
+python_version = "3.12"
