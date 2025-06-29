@@ -1,5 +1,3 @@
-name: 'Run Pre-commit Checks'
-description: 'Sets up Python, installs dependencies with pipenv, and runs pre-commit'
 name: 'Run Pre-commit Checks with Auto-fix'
 description: 'Sets up Python, installs dependencies, runs pre-commit, and auto-commits fixes.'
 
