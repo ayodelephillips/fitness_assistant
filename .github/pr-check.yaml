@@ -1,0 +1,9 @@
+    name: Pre-commit check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # checkout repo code to virtual machine
+
+      - name: Run Pre-commit Checks
+        # This path points to the local action we just created
+        uses: ./.github/action
+
