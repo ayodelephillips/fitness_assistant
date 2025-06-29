@@ -1,3 +1,12 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  pre-commit-check:
     name: Pre-commit check
     runs-on: ubuntu-latest
     steps:
@@ -5,5 +14,9 @@
 
       - name: Run Pre-commit Checks
         # This path points to the local action we just created
-        uses: ./.github/action
+        uses: ./.github/actions/run-pre-commit
 
+
+
+# add step to check for permissions key
+# add step to run unit tests
