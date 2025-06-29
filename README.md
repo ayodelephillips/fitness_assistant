@@ -2,7 +2,7 @@
 
 ## 🏋️ Problem Description
 
-Many people struggle to find clear, personalized workout guidance. 
+Many people struggle to find clear, personalized workout guidance.
 Online resources are scattered, and beginners often feel overwhelmed by equipment choices, form instructions, and exercise variety.
 
 **Fitness Assistant by Phillips** solves this by offering an AI-powered chat assistant that helps users discover and understand exercises quickly and interactively.
@@ -40,7 +40,7 @@ Users can chat with the assistant to:
 
 Example queries:
 
-> "Show me upper body push exercises with a kettlebell."  
+> "Show me upper body push exercises with a kettlebell."
 > "How do I do a cable row?"
 
 This tool makes fitness guidance fast, accessible, and user-friendly.

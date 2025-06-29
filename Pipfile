@@ -15,13 +15,14 @@ hf-xet = "1.0.0"
 langchain = "*"
 openai = "*"
 langchain-community = "*"
-pre-commit = "*"
+
 
 [dev-packages]
 tqdm = "*"
 notebook = "==7.1.2"
 ipywidgets = "*"
 wget = "*"
+pre-commit = "*"
 
 [requires]
 python_version = "3.12"

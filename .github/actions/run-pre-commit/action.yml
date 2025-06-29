@@ -17,6 +17,10 @@ runs:
         python -m pip install --upgrade pip
         pip install pipenv
 
+    - name: Generate platform-specific lock file
+      shell: bash
+      run: pipenv lock
+
     - name: Install project dependencies
       shell: bash
       run: pipenv install --dev
@@ -24,10 +28,3 @@ runs:
     - name: Run pre-commit and apply fixes
       shell: bash
       run: pipenv run pre-commit run --all-files --show-diff-on-failure || true
-
-    - name: Commit and push changes
-      uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        commit_message: "style: auto-fix with pre-commit"
-        commit_user_name: "github-actions[bot]"
-        commit_user_email: "github-actions[bot]@users.noreply.github.com"
