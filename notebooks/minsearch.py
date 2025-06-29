@@ -31,7 +31,9 @@ class Index:
         self.text_fields = text_fields
         self.keyword_fields = keyword_fields
 
-        self.vectorizers = {field: TfidfVectorizer(**vectorizer_params) for field in text_fields}
+        self.vectorizers = {
+            field: TfidfVectorizer(**vectorizer_params) for field in text_fields
+        }
         self.keyword_df = None
         self.text_matrices = {}
         self.docs = []
@@ -44,18 +46,18 @@ class Index:
             docs (list of dict): List of documents to index. Each document is a dictionary.
         """
         self.docs = docs
-        #1 create dict of keyword fields 
+        # 1 create dict of keyword fields
         keyword_data = {field: [] for field in self.keyword_fields}
 
-        #2.  # Generate the TF-IDF matrices for each text field
+        # 2.  # Generate the TF-IDF matrices for each text field
         for field in self.text_fields:
-            texts = [doc.get(field, '') for doc in docs]
+            texts = [doc.get(field, "") for doc in docs]
             self.text_matrices[field] = self.vectorizers[field].fit_transform(texts)
 
-        #3. # Store keyword data for exact matching
+        # 3. # Store keyword data for exact matching
         for doc in docs:
             for field in self.keyword_fields:
-                keyword_data[field].append(doc.get(field, ''))
+                keyword_data[field].append(doc.get(field, ""))
 
         self.keyword_df = pd.DataFrame(keyword_data)
 
@@ -75,7 +77,10 @@ class Index:
             list of dict: List of documents matching the search criteria, ranked by relevance.
         """
         # Convert query to TF-IDF vectors for each text field
-        query_vecs = {field: self.vectorizers[field].transform([query]) for field in self.text_fields}
+        query_vecs = {
+            field: self.vectorizers[field].transform([query])
+            for field in self.text_fields
+        }
         scores = np.zeros(len(self.docs))
 
         # Compute cosine similarity for each text field to the query vectors and apply boost
