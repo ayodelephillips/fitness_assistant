@@ -54,7 +54,7 @@ Built to make staying fit easier and smarter.
 
 ## Running It
 
-Pipenv is used to manage packages and dependencies using a pipfile.
+A. Pipenv is used to manage packages and dependencies using a pipfile.
 
 Make sure you have pipenv installed.
 
@@ -62,18 +62,64 @@ Make sure you have pipenv installed.
 pip install pipenv
 ```
 
-Installing the dependencies:
+B. Installing the dependencies:
 
 ```bash
 pipenv install
 ```
 
+```bash
+pipenv install  --dev
+```
+
+
+C. Running gemma3 locally
+```bash
+ollama run gemma3:2b  
+```
+
+
+
+D. Pull  qdrant container  in docker
+```bash
+docker pull qdrant/qdrant
+```
+
+
+E. Running qdrant  in docker
+6333 is for the REST API
+6334 is for the gRPC API
+quadranst_storage  mounts local storage to keep data persistent even if the container is deleted/restarted
+```bash
+docker run -p 6333:6333 -p 6334:6334 -v"$(pwd)/qdrant_storage:/qdrant/storage:z" qdrant/qdrant
+```
+
+F. Install qdrant client and fastembed which does the data vectorization
+
+```bash
+pipenv install -q "qdrant-client[fastembed]>=1.14.2"
+```
+
+G. Access the vector db in quandrant by going to http://localhost:6333/dashboard
 
 Running Jupyter Notebook for experiments
 ```bash
 cd notebooks
 pipenv run jupyter notebook
 ```
+
+Running pre-commit on files before pushing to git branch
+```bash
+pipenv run pre-commit run --all-files
+```
+
+
+Running the elastic search server
+ in docker
+```bash
+docker run -it --name elasticsearch -p9200:9200 -p9300:9300 -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.4.3
+```
+
 
 
 
