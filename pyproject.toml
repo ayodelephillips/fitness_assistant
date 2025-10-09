@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "fitness_assistant"
+version = "0.1.0"
+description = "A fitness assistant application"
+authors = ["samuel phillips"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "2.2.3"
+langchain = "*"
+langchain-community = "*"
+qdrant-client = {version = ">=1.14.2", extras = ["fastembed"]}
+huggingface-hub = {version = "*", extras = ["hf_xet"]}
+langchain-google-genai = "^2.1.12"
+langchain-core = "^0.3.78"
+
+[tool.poetry.group.dev.dependencies]
+tqdm = "*"
+notebook = "*"
+ipywidgets = "*"
+wget = "*"
+pre-commit = "*"
+ruff = "*"
+black = "*"
+mypy = "*"
+hf-xet = "1.0.0"
+
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
