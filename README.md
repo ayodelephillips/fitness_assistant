@@ -75,7 +75,7 @@ pipenv install  --dev
 
 C. Running gemma3 locally
 ```bash
-ollama run gemma3:2b  
+ollama run gemma3:2b
 ```
 
 
@@ -121,8 +121,10 @@ docker run -it --name elasticsearch -p9200:9200 -p9300:9300 -e "discovery.type=s
 ```
 
 
-
-
+install pre-commit as part of workflows
+```bash
+pre-commit install
+```
 
 ## Evaluation
 
@@ -133,6 +135,3 @@ docker run -it --name elasticsearch -p9200:9200 -p9300:9300 -e "discovery.type=s
 
 
 ## Monitoring
-
-
-deploying model on docker container - https://chatgpt.com/share/67fc3eff-21e0-8007-9f03-a7575d0fb78a
