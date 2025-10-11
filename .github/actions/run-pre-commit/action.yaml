@@ -15,4 +15,4 @@ runs:
       shell: bash
       run: |
         pip install "poetry==2.2.1"
-        pip install --all-groups
+        poetry install --all-groups
