@@ -19,4 +19,4 @@ runs:
 
     - name: Run pre-commit and apply fixes
       shell: bash
-      run: pipenv run pre-commit run --all-files --show-diff-on-failure || true
+      run: poetry run pre-commit run --all-files --show-diff-on-failure || true
