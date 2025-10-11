@@ -16,3 +16,7 @@ runs:
       run: |
         pip install "poetry==2.2.1"
         poetry install --all-groups
+
+    - name: Run pre-commit and apply fixes
+      shell: bash
+      run: pipenv run pre-commit run --all-files --show-diff-on-failure || true
