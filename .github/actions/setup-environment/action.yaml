@@ -3,6 +3,10 @@ description: 'Sets up Python, installs Poetry, and caches/installs dependencies.
 
 runs:
   using: "composite"
+  env:
+    POETRY_HOME: ${{ github.workspace }}/.poetry
+    PATH: ${{ github.workspace }}/.poetry/bin:${{ env.PATH }}
+
   steps:
     - name: Set up Python 3.12
       uses: actions/setup-python@v5
@@ -10,11 +14,10 @@ runs:
         python-version: '3.12'
         cache: 'poetry'
 
-    - name: Install Poetry
+    - name: Install Poetry and dependencies
       shell: bash
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        export PATH="$HOME/.local/bin:$PATH"
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        set -eux
+        curl -sSL https://install.python-poetry.org | python3 - --install-dir $POETRY_HOME --version 1.8.3
         poetry --version
-        poetry install --no-interaction
+        poetry install --no-interaction --no-ansi
