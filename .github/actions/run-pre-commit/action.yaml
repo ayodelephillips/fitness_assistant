@@ -5,9 +5,15 @@ description: 'Sets up Python, installs dependencies, runs pre-commit, and auto-c
 runs:
   using: "composite"
   steps:
-    - name: Setup Environment
-      uses: ./.github/actions/setup-environment
+    - name: Checkout
+      uses: actions/checkout@v4.2.2
 
-    # - name: Run pre-commit and apply fixes
-    #   shell: bash
-    #   run: poetry run pre-commit run --all-files --show-diff-on-failure || true
+    - name: Setup Poetry
+      uses: threeal/setup-poetry-action@v1.1.0
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Run pre-commit and apply fixes
+      shell: bash
+      run: poetry run pre-commit run --all-files --show-diff-on-failure || true
