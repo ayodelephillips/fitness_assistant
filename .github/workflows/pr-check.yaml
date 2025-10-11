@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4 # checkout repo code to virtual machine
 
       - name: Setup Environment and Install Dependencies
-        uses: ./.github/actions/setup-environment
+        uses:  ./.github/actions/run-pre-commit
 
   run-unit-tests:
     name: Run Unit Tests
@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Environment
-        uses: ./.github/actions/run-pre-commit
+        uses: ./.github/actions/setup-environment
 
       - name: Run tests with pytest
         run: poetry run pytest
