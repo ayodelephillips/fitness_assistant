@@ -12,8 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # checkout repo code to virtual machine
 
-      - name: Run Pre-commit Checks
-        uses: ./.github/actions/run-pre-commit
+      - name: Setup Environment and Install Dependencies
+        uses: ./.github/actions/setup-environment
 
   run-unit-tests:
     name: Run Unit Tests
@@ -22,17 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'poetry'
-
-      - name: Install Poetry
-        run: pipx install poetry
-
-      - name: Install dependencies
-        run: poetry install --no-interaction
+      - name: Setup Environment
+        uses: ./.github/actions/run-pre-commit
 
       - name: Run tests with pytest
         run: poetry run pytest
+        env:
+          QDRANT_API_KEY: "test-key"
+          GOOGLE_API_KEY: "test-key"

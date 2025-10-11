@@ -5,21 +5,8 @@ description: 'Sets up Python, installs dependencies, runs pre-commit, and auto-c
 runs:
   using: "composite"
   steps:
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-        cache: 'poetry'
-
-    - name: Install Poetry
-      shell: bash
-      run: |
-        pipx install poetry
-        echo "$(pipx run --spec poetry -- --version | cut -d' ' -f3)/bin" >> $GITHUB_PATH
-
-    - name: Install project dependencies
-      shell: bash
-      run: poetry install --no-interaction
+    - name: Setup Environment
+      uses: ./.github/actions/setup-environment
 
     - name: Run pre-commit and apply fixes
       shell: bash
