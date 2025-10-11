@@ -8,6 +8,6 @@ runs:
     - name: Setup Environment
       uses: ./.github/actions/setup-environment
 
-    - name: Run pre-commit and apply fixes
-      shell: bash
-      run: poetry run pre-commit run --all-files --show-diff-on-failure || true
+    # - name: Run pre-commit and apply fixes
+    #   shell: bash
+    #   run: poetry run pre-commit run --all-files --show-diff-on-failure || true
