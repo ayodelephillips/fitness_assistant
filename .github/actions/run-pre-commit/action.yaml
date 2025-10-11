@@ -10,9 +10,12 @@ runs:
       with:
         python-version: '3.12'
         cache: 'poetry'
+
     - name: Install Poetry
       shell: bash
-      run: pipx install poetry
+      run: |
+        pipx install poetry
+        echo "$(pipx run --spec poetry -- --version | cut -d' ' -f3)/bin" >> $GITHUB_PATH
 
     - name: Install project dependencies
       shell: bash
