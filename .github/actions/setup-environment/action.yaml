@@ -11,12 +11,12 @@ runs:
         cache: 'poetry'
 
     - name: Install Poetry
-        run:|
+      run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     - name: Verify Poetry installation
-        run:poetry --version
+      run: poetry --version
 
     - name: Install project dependencies
       shell: bash
