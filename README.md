@@ -54,55 +54,64 @@ Built to make staying fit easier and smarter.
 
 ## Running It
 
-A. Pipenv is used to manage packages and dependencies using a pipfile.
+1. Prerequisites:
 
-Make sure you have pipenv installed.
-
-```bash
-pip install pipenv
-```
-
-B. Installing the dependencies:
-
-```bash
-pipenv install
-```
-
-```bash
-pipenv install  --dev
-```
+    A.  Poetry is used to manage packages and dependencies using a pyproject.toml file
 
 
-C. Running gemma3 locally
-```bash
-ollama run gemma3:2b  
-```
+    ```bash
+    pip install poetry
+    ```
+
+    B. Installing the dependencies:
+
+    ```bash
+    poetry install
+    ```
 
 
 
-D. Pull  qdrant container  in docker
-```bash
-docker pull qdrant/qdrant
-```
+
+    C. Install qdrant for managing the Vector DB.
+    There are 2 methods for using qdrant.
+
+     i. Using docker locally
+
+        a. Pull  qdrant container  in docker
+        ```bash
+        docker pull qdrant/qdrant
+        ```
 
 
-E. Running qdrant  in docker
-6333 is for the REST API
-6334 is for the gRPC API
-quadranst_storage  mounts local storage to keep data persistent even if the container is deleted/restarted
-```bash
-docker run -p 6333:6333 -p 6334:6334 -v"$(pwd)/qdrant_storage:/qdrant/storage:z" qdrant/qdrant
-```
+        b. Running qdrant  in docker
+        6333 is for the REST API
+        6334 is for the gRPC API
+        quadranst_storage  mounts local storage to keep data persistent even if the container is deleted/restarted
+        ```bash
+        docker run -p 6333:6333 -p 6334:6334 -v"$(pwd)/qdrant_storage:/qdrant/storage:z" qdrant/qdrant
+        ```
 
-F. Install qdrant client and fastembed which does the data vectorization
+        C. Install qdrant client and fastembed which does the data vectorization. This is already stated in pyproject.toml
+        ```bash
+        pipenv install -q "qdrant-client[fastembed]>=1.14.2"
+        ```
 
-```bash
-pipenv install -q "qdrant-client[fastembed]>=1.14.2"
-```
+         Access the vector db in quandrant by going to http://localhost:6333/dashboard
 
-G. Access the vector db in quandrant by going to http://localhost:6333/dashboard
+     ii. Using the Qdrant cloud free tier cluster as shown [here](https://qdrant.tech/documentation/cloud/create-cluster/)
+     It provides you a UI(which allows you see the data points of each vectors), and an API key to connect
 
-Running Jupyter Notebook for experiments
+
+    D. Create API key from google ai studio [here](https://aistudio.google.com/)
+
+    E. Environment Variables
+    Ensure to create a .env file to store your environment variables
+
+    QDRANT_API_KEY=<QDRANT_API_KEY>
+    GOOGLE_API_KEY=<GOOGLE_API_KEY
+
+
+2. Running Jupyter Notebook for experiments
 ```bash
 cd notebooks
 pipenv run jupyter notebook
@@ -121,8 +130,12 @@ docker run -it --name elasticsearch -p9200:9200 -p9300:9300 -e "discovery.type=s
 ```
 
 
+install pre-commit as part of workflows
+```bash
+pre-commit install
+```
 
-
+3. Running the app
 
 ## Evaluation
 
@@ -133,6 +146,3 @@ docker run -it --name elasticsearch -p9200:9200 -p9300:9300 -e "discovery.type=s
 
 
 ## Monitoring
-
-
-deploying model on docker container - https://chatgpt.com/share/67fc3eff-21e0-8007-9f03-a7575d0fb78a
