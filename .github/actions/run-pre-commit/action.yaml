@@ -12,6 +12,7 @@ runs:
       uses: threeal/setup-poetry-action@v1.1.0
 
     - name: Install dependencies
+      shell: bash
       run: poetry install
 
     - name: Run pre-commit and apply fixes
