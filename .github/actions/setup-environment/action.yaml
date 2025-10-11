@@ -3,10 +3,6 @@ description: 'Sets up Python, installs Poetry, and caches/installs dependencies.
 
 runs:
   using: "composite"
-  env:
-    POETRY_HOME: ${{ github.workspace }}/.poetry
-    PATH: ${{ github.workspace }}/.poetry/bin:${{ env.PATH }}
-
   steps:
     - name: Set up Python 3.12
       uses: actions/setup-python@v5
@@ -14,9 +10,20 @@ runs:
         python-version: '3.12'
 
     - name: Install Poetry and dependencies
+      env:
+        POETRY_HOME: ${{ github.workspace }}/.poetry
       shell: bash
       run: |
         set -eux
         curl -sSL https://install.python-poetry.org | python3 - --install-dir $POETRY_HOME --version 1.8.3
+        echo "$POETRY_HOME/bin" >> $GITHUB_PATH
         poetry --version
         poetry install --no-interaction --no-ansi
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.poetry/cache
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
