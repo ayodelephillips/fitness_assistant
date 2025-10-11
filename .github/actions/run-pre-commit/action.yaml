@@ -11,6 +11,7 @@ runs:
         python-version: '3.12'
         cache: 'poetry'
     - name: Install Poetry
+      shell: bash
       run: pipx install poetry
 
     - name: Install project dependencies
