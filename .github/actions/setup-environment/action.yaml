@@ -17,6 +17,6 @@ runs:
         POETRY_HOME=".poetry"
         mkdir -p "$POETRY_HOME"
         curl -sSL https://install.python-poetry.org | python3 - --install-dir "$POETRY_HOME" --version 1.8.3
-        export PATH="$POETRY_HOME/bin:$PATH"
+        echo "$POETRY_HOME/bin" >> $GITHUB_PATH
         poetry --version
         poetry install --no-interaction --no-ansi
