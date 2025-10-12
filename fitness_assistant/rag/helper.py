@@ -1,5 +1,9 @@
 import pandas as pd
 from pathlib import Path
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
 from fitness_assistant.rag.settings import QdrantConfig
 from qdrant_client.models import ScoredPoint
 
@@ -48,3 +52,20 @@ def format_vector_db_context(context_points: list[ScoredPoint]):
         context_texts.append(formatted_context)
 
     return "\n\n---\n\n".join(context_texts)
+
+
+def display_rag_response(
+    console_instance: Console, answer: str, is_context: bool = False
+) -> None:
+    """Pretty-print the RAG output using rich panels.
+    :params - console_instance -  the instance of the console to use
+    :params - answer - LLM response
+    :params - is_context - boolean to check if the answer is vector db context or the llm response
+    """
+    console_instance.print(
+        Panel(
+            Text(answer, style="magenta"),
+            title="Assistant's Answer" if not is_context else "Context from Vector DB",
+            border_style="magenta",
+        )
+    )

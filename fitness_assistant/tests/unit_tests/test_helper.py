@@ -2,38 +2,18 @@
 Test utility helper function
 """
 
-import pandas as pd
 import pytest
 from qdrant_client.models import ScoredPoint
+from unittest.mock import MagicMock
+from rich.panel import Panel
 
 from fitness_assistant.rag.helper import (
     load_data,
     clean_data,
     create_document,
     format_vector_db_context,
+    display_rag_response,
 )
-
-
-@pytest.fixture
-def sample_dataframe():
-    """Provides a sample DataFrame for testing."""
-    data = {
-        "Exercise Name": ["Push-Up", "Squat", "Push-Up"],
-        "Type of Activity": ["Strength", "Strength", "Strength"],
-        "Body Part": ["Upper Body", "Lower Body", "Upper Body"],
-    }
-    return pd.DataFrame(data)
-
-
-@pytest.fixture
-def cleaned_dataframe():
-    """Provides a cleaned version of the sample DataFrame."""
-    data = {
-        "exercise_name": ["Push-Up", "Squat"],
-        "type_of_activity": ["Strength", "Strength"],
-        "body_part": ["Upper Body", "Lower Body"],
-    }
-    return pd.DataFrame(data)
 
 
 def test_load_data_utf8(tmp_path):
@@ -96,7 +76,6 @@ def test_create_document(cleaned_dataframe):
 
 def test_format_vector_db_context():
     """Tests the formatting of ScoredPoint objects into a readable string."""
-    # Mock ScoredPoint objects
     mock_points = [
         ScoredPoint(
             id=1,
@@ -120,7 +99,6 @@ def test_format_vector_db_context():
                 "exercise_name": "Tricep Extension",
                 "body_part": "Arms",
                 "instructions": "Extend the weight.",
-                # Missing some fields to test graceful handling
             },
             vector=None,
         ),
@@ -139,3 +117,30 @@ def test_format_vector_db_context():
 
     # # Check the separator between points
     assert "\n\n---\n\n" in formatted_string
+
+
+@pytest.mark.parametrize(
+    "is_context, expected_title",
+    [
+        (False, "Assistant's Answer"),
+        (True, "Context from Vector DB"),
+    ],
+)
+def test_display_rag_response(is_context, expected_title):
+    """Tests that display_rag_response prints a panel with the correct title."""
+    # Arrange
+    mock_console = MagicMock()
+    test_answer = "This is a test answer."
+
+    # Act
+    display_rag_response(
+        console_instance=mock_console, answer=test_answer, is_context=is_context
+    )
+
+    # Assert
+    mock_console.print.assert_called_once()
+    printed_object = mock_console.print.call_args[0][0]
+
+    assert isinstance(printed_object, Panel)
+    assert printed_object.title == expected_title
+    assert printed_object.renderable.plain == test_answer

@@ -35,7 +35,6 @@ def test_run_invokes_chain_and_returns_content(mock_chat_google, mock_llm_config
     """
     Tests the run method to ensure it invokes the chain and returns the content.
     """
-    # Arrange
     mock_response = MagicMock()
     mock_response.content = "This is the generated response."
 
@@ -43,10 +42,8 @@ def test_run_invokes_chain_and_returns_content(mock_chat_google, mock_llm_config
     flow.chain = MagicMock()
     flow.chain.invoke.return_value = mock_response
 
-    # Act
     result = flow.run(query="test query", context="test context")
 
-    # Assert
     flow.chain.invoke.assert_called_once_with(
         {"question": "test query", "context": "test context"}
     )

@@ -1,6 +1,7 @@
 from qdrant_client import QdrantClient, models
 from fitness_assistant.rag.settings import QdrantConfig, LlmConfig
 from fitness_assistant.rag.helper import (
+    display_rag_response,
     load_data,
     clean_data,
     create_document,
@@ -12,9 +13,22 @@ from langchain_core.prompts import ChatPromptTemplate
 from qdrant_client.http.exceptions import ResponseHandlingException
 
 from typing import Optional
+import argparse
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.logging import RichHandler
+
 import logging
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level="INFO",
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[
+        RichHandler(markup=True, rich_tracebacks=True)
+    ],  # Use RichHandler for logging
+)
 
 
 class LLMFlow:
@@ -251,28 +265,95 @@ class ManageVectorDb:
             limit=self.qdrant_config.response_limit,  # top closest matches
             with_payload=True,  # to get metadata in the results
         )
-        logging.info(f"Vector search completed with results.{len(results.points)}")
-
         return results
 
 
-def rag():
+def rag(user_query: str, config: QdrantConfig | None = None):
+    """
+    Entrypoint for the RAG pipeline.
+    Recieves user's query, get vectors from Vector db, and return LLM response
 
-    query = "what exercise helps me grow my biceps"
-    vector_db = ManageVectorDb()
+    :params - user_query - Query from the user
+    :params - config -optional configuration for qdrant
+    """
+
+    if config:
+        vector_db = ManageVectorDb(config=config)
+    else:
+        vector_db = ManageVectorDb()
 
     if vector_db.qdrant_config.create_vectors:
         vector_db.run_vector_embedding()
 
     # # search with vector
-    results = vector_db.search(query=query)
-
+    results = vector_db.search(query=user_query)
     context = format_vector_db_context(results.points)
 
+    display_rag_response(console_instance=Console(), answer=context, is_context=True)
+
     rag_instance = LLMFlow()
-    response = rag_instance.run(query=query, context=context)
-    logging.info(f"Llm response: {response}")
+    return rag_instance.run(query=user_query, context=context)
+
+
+def main():
+    """
+    Using Argparser, guide the user through the RAG pipeline
+    """
+    parser = argparse.ArgumentParser(
+        description="Run the Fitness assistant pipeline interactively."
+    )
+    parser.add_argument(
+        "--create-vectors",
+        action="store_true",
+        help="An optional flag to create vector embedding. "
+        "If provided, you will be asked whether you want to recreate the collection."
+        "A collection is a 'bank' of the exercise vectors",
+    )
+    args = parser.parse_args()
+    qdrant_config = None
+
+    query = Prompt.ask("[bold cyan]Enter your Fitness question:[/bold cyan]")
+
+    if not query:
+        logging.warning("[bold red]No questions entered. Exiting[/bold red]")
+        return
+
+    if args.create_vectors:
+        logging.info("[yellow] You chose to run vector embedding.[/yellow]")
+
+        while True:
+            recreate_choice = Prompt.ask(
+                "[bold cyan]Do you want to recreate the collection?[/bold cyan]",
+                choices=["yes", "no", "y", "n"],
+                default="no",
+            )
+
+            if recreate_choice in ("yes", "y"):
+                logging.info(
+                    "[blue]Configured to recreate collection and vector embeddings...[/blue]"
+                )
+                qdrant_config = QdrantConfig(
+                    create_vectors=True, recreate_collection=True
+                )
+                break
+
+            elif recreate_choice in ("no", "n"):
+                logging.info(
+                    " Configured to upsert new vectors without recreating collection..."
+                )
+                qdrant_config = QdrantConfig(
+                    create_vectors=True, recreate_collection=False
+                )
+                break
+
+            else:
+                logging.warning(
+                    "[red]⚠️ Invalid choice. Please enter 'yes' or 'no'.[/red]"
+                )
+
+    response = rag(user_query=query, config=qdrant_config)
+    display_rag_response(console_instance=Console(), answer=response)
 
 
 if __name__ == "__main__":
-    rag()
+    main()

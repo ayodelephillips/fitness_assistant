@@ -109,9 +109,10 @@ Built to make staying fit easier and smarter.
 
     QDRANT_API_KEY=<QDRANT_API_KEY>
     GOOGLE_API_KEY=<GOOGLE_API_KEY
-
+Note, you would need to update the <cluster_url> in fitness_assistant/rag/settings.py
 
 2. Running Jupyter Notebook for experiments
+Disregard the notebooks, as it's largely for experiments
 ```bash
 cd notebooks
 pipenv run jupyter notebook
@@ -137,12 +138,30 @@ pre-commit install
 
 3. Running the app
 
+i. cd into fitness_assistant/rag directory.
+There are 2 modes for executing the llm_interface.py script.
+
+ii. To create a collection of vector embeddings, and also ask the user for his/her question
+```bash
+python llm_interface.py --create-vectors
+```
+
+iii. To run the RAG pipeline on an existing collection of vector embeddings
+```bash
+python llm_interface.py
+
+```
+
+## Next steps
+1. Deployment
+A cloud run deployment
+![What is this](fitness_assistant/rag/data/Next_steps_Fitness_Assistant.jpg)
 ## Evaluation
 
 
 ## Retrieval
 
-## RAg Flow
-
 
 ## Monitoring
+
+## Improvements
