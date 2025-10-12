@@ -42,7 +42,6 @@ def test_get_text_embedding_string():
     """
     Tests the static method for creating the text string for embedding.
     """
-    # Arrange
     record = {
         "exercise_name": "Test Curl",
         "muscle_groups_activated": "Biceps",

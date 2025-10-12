@@ -39,7 +39,7 @@ class EvaluationSet:
 def get_evaluation_set() -> EvaluationSet:
     """
     Creates a sample evaluation set for the fitness assistant.
-    In a real-world scenario, this would be loaded from a file (e.g., JSON, CSV).
+    # TODO- load from file
     """
     return EvaluationSet(
         name="fitness_bicep_and_leg_workout_eval",
@@ -76,14 +76,14 @@ class RagEvaluator:
         Returns a dictionary containing the actual answer, retrieved context,
         and the original query.
         """
-        # 1. Retrieve context from the vector database
+        # 1. get context
         search_results = self.vector_db.search(query=query)
         retrieved_context = format_vector_db_context(search_results.points)
         logging.info(
             f"Retrieved context for query '{query}':\n{retrieved_context[:300]}..."
         )
 
-        # 2. Generate an answer using the LLM
+        # 2.get llm response
         actual_answer = self.llm_flow.run(query=query, context=retrieved_context)
         logging.info(f"Generated answer for query '{query}':\n{actual_answer}")
 
@@ -111,13 +111,10 @@ class RagEvaluator:
             )
             test_cases.append(test_case)
 
-            print("Waiting to avoid hitting API rate limit...")
+            logging.info("Waiting to avoid hitting API rate limit...")
             time.sleep(35)
 
-        # Define the metrics to run
-        # The metrics will use the same Gemini model as the RAG pipeline.
-        # Ensure your GOOGLE_API_KEY is set as an environment variable.
-        # for these metrics to work, as they use an LLM for evaluation.
+        logging.info(f"Test cases:{test_cases}")
 
         config = LlmConfig()
         eval_model = GeminiModel(
@@ -144,12 +141,7 @@ class RagEvaluator:
 
 
 if __name__ == "__main__":
-    # To run this, you first need to install deepeval:
-    # poetry add deepeval
-    #
-    # You also need to set your Google API key for the evaluation model:
-    # export GOOGLE_API_KEY="your-key-here"
-
     evaluation_set = get_evaluation_set()
+    logging.info(f"Evaluation set: {evaluation_set}")
     evaluator = RagEvaluator()
     evaluator.evaluate(evaluation_set)
