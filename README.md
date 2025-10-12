@@ -112,6 +112,7 @@ Built to make staying fit easier and smarter.
 Note, you would need to update the <cluster_url> in fitness_assistant/rag/settings.py
 
 2. Running Jupyter Notebook for experiments
+Disregard the notebooks, as it's largely for experiments
 ```bash
 cd notebooks
 pipenv run jupyter notebook
