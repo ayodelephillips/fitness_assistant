@@ -15,6 +15,7 @@ huggingface-hub = {version = "*", extras = ["hf_xet"]}
 langchain-google-genai = "^2.1.12"
 langchain-core = "^0.3.78"
 pytest = "^8.4.2"
+rich = "^14.2.0"
 
 [tool.poetry.group.dev.dependencies]
 tqdm = "*"
