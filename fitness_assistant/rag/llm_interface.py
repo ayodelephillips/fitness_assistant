@@ -7,6 +7,19 @@ from fitness_assistant.rag.helper import (
     create_document,
     format_vector_db_context,
 )
+from fitness_assistant.rag.logging_config import RAGLogger, configure_logging
+from fitness_assistant.rag.validators import validate_user_input, validate_llm_response
+from fitness_assistant.rag.monitoring import (
+    get_metrics_collector,
+    HallucinationDetector,
+    QueryRateLimiter,
+    RetrievalMetrics,
+    GenerationMetrics,
+)
+from fitness_assistant.rag.user_preferences import (
+    UserProfile,
+    filter_exercises_by_profile,
+)
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -14,32 +27,28 @@ from qdrant_client.http.exceptions import ResponseHandlingException
 
 from typing import Optional
 import argparse
+import time
+import uuid
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.logging import RichHandler
 
 import logging
 
-# logging.basicConfig(level=logging.INFO)
-logging.basicConfig(
-    level="INFO",
-    format="%(message)s",
-    datefmt="[%X]",
-    handlers=[
-        RichHandler(markup=True, rich_tracebacks=True)
-    ],  # Use RichHandler for logging
-)
+# Configure structured logging
+configure_logging(level=logging.INFO)
 
 
 class LLMFlow:
     """
-    Define langchain flow for LLM
+    Define langchain flow for LLM with validation and monitoring
     """
 
     def __init__(self, config: LlmConfig = LlmConfig()):
         self.llm_config = config
         self.llm = self._connect_to_llm()
         self.chain = self._build_chain()
+        self.metrics_collector = get_metrics_collector()
         if not self.llm or not self.chain:
             raise ConnectionError(
                 "Failed to initialize LLM or build the processing chain.."
@@ -85,19 +94,54 @@ class LLMFlow:
             return chain
         return None
 
-    def run(self, query: str, context: str):
+    def run(self, query: str, context: str, trace_id: str = ""):
         """
-        Run the rag flow
+        Run the rag flow with validation and monitoring
         :params query - Query from the user
         :params  context- context retrived from vector db
+        :params trace_id - Trace ID for request tracking
         """
-        response = self.chain.invoke({"question": query, "context": context})
-        return response.content
+        if not trace_id:
+            trace_id = str(uuid.uuid4())
+
+        rag_logger = RAGLogger(trace_id)
+
+        try:
+            start_time = time.time()
+            rag_logger.log_llm_call_start()
+
+            response = self.chain.invoke({"question": query, "context": context})
+            response_text = response.content
+
+            response_time_ms = (time.time() - start_time) * 1000
+            rag_logger.log_llm_call_complete(response_time_ms=response_time_ms)
+
+            # Validate response
+            validation_result = validate_llm_response(response_text)
+            if validation_result["valid"]:
+                rag_logger.log_response_sent(len(response_text))
+                self.metrics_collector.record_generation(
+                    GenerationMetrics(
+                        response_time_ms=response_time_ms,
+                        model_name=self.llm_config.model_name,
+                    )
+                )
+            else:
+                rag_logger.logger.warning(
+                    f"Response validation failed: {validation_result['error']}"
+                )
+
+            return response_text
+
+        except Exception as e:
+            rag_logger.log_error(e, "LLM generation")
+            self.metrics_collector.record_error(str(e))
+            raise
 
 
 class ManageVectorDb:
     """
-    Manage qdrant Vector database
+    Manage qdrant Vector database with monitoring
     """
 
     def __init__(self, config: QdrantConfig = QdrantConfig()):
@@ -115,6 +159,7 @@ class ManageVectorDb:
             self.client = None
         self.document = None
         self.query: Optional[str] = None
+        self.metrics_collector = get_metrics_collector()
 
     def load_query(self, query: str):
         """
@@ -255,44 +300,127 @@ class ManageVectorDb:
         collections = self.client.get_collections().collections
         return any(c.name == self.qdrant_config.collection_name for c in collections)
 
-    def search(self, query: str):
+    def search(self, query: str, trace_id: str = ""):
         """
-        Search for vector in vector db
+        Search for vector in vector db with monitoring
         """
-        results = self.client.query_points(
-            collection_name=self.qdrant_config.collection_name,
-            query=models.Document(text=query, model=self.qdrant_config.embedding_model),
-            limit=self.qdrant_config.response_limit,  # top closest matches
-            with_payload=True,  # to get metadata in the results
-        )
-        return results
+        if not trace_id:
+            trace_id = str(uuid.uuid4())
+
+        rag_logger = RAGLogger(trace_id)
+        start_time = time.time()
+        rag_logger.log_retrieval_start()
+
+        try:
+            results = self.client.query_points(
+                collection_name=self.qdrant_config.collection_name,
+                query=models.Document(
+                    text=query, model=self.qdrant_config.embedding_model
+                ),
+                limit=self.qdrant_config.response_limit,  # top closest matches
+                with_payload=True,  # to get metadata in the results
+            )
+
+            response_time_ms = (time.time() - start_time) * 1000
+            scores = [p.score for p in results.points] if results.points else []
+            top_score = max(scores) if scores else 0.0
+
+            rag_logger.log_retrieval_complete(
+                num_results=len(results.points),
+                scores=scores,
+                response_time_ms=response_time_ms,
+            )
+
+            self.metrics_collector.record_retrieval(
+                RetrievalMetrics(
+                    num_results=len(results.points),
+                    scores=scores,
+                    response_time_ms=response_time_ms,
+                    top_score=top_score,
+                )
+            )
+
+            return results
+
+        except Exception as e:
+            rag_logger.log_error(e, "Vector DB retrieval")
+            self.metrics_collector.record_error(str(e))
+            raise
 
 
-def rag(user_query: str, config: QdrantConfig | None = None):
+def rag(user_query: str, config: QdrantConfig | None = None, user_profile: UserProfile | None = None):
     """
     Entrypoint for the RAG pipeline.
     Recieves user's query, get vectors from Vector db, and return LLM response
+    Includes input validation and monitoring
 
     :params - user_query - Query from the user
-    :params - config -optional configuration for qdrant
+    :params - config - optional configuration for qdrant
+    :params - user_profile - optional user profile for personalized filtering
     """
+    trace_id = str(uuid.uuid4())
+    rag_logger = RAGLogger(trace_id)
+    metrics_collector = get_metrics_collector()
 
-    if config:
-        vector_db = ManageVectorDb(config=config)
-    else:
-        vector_db = ManageVectorDb()
+    try:
+        # Validate user input
+        validation_result = validate_user_input(user_query)
+        if not validation_result["valid"]:
+            raise ValueError(f"Invalid input: {validation_result['error']}")
 
-    if vector_db.qdrant_config.create_vectors:
-        vector_db.run_vector_embedding()
+        rag_logger.log_query_received(user_query)
+        metrics_collector.record_query()
 
-    # # search with vector
-    results = vector_db.search(query=user_query)
-    context = format_vector_db_context(results.points)
+        if config:
+            vector_db = ManageVectorDb(config=config)
+        else:
+            vector_db = ManageVectorDb()
 
-    display_rag_response(console_instance=Console(), answer=context, is_context=True)
+        if vector_db.qdrant_config.create_vectors:
+            vector_db.run_vector_embedding()
 
-    rag_instance = LLMFlow()
-    return rag_instance.run(query=user_query, context=context)
+        # search with vector
+        results = vector_db.search(query=user_query, trace_id=trace_id)
+        
+        # Apply user profile filtering if provided
+        if user_profile and results.points:
+            exercises = [point.payload for point in results.points]
+            filtered_exercises = filter_exercises_by_profile(exercises, user_profile)
+            
+            if filtered_exercises:
+                # Update results with filtered exercises
+                from qdrant_client.http import models as qdrant_models
+                filtered_points = []
+                for idx, exercise in enumerate(filtered_exercises):
+                    for point in results.points:
+                        if point.payload == exercise:
+                            filtered_points.append(point)
+                            break
+                results.points = filtered_points
+        
+        context = format_vector_db_context(results.points)
+
+        display_rag_response(
+            console_instance=Console(), answer=context, is_context=True
+        )
+
+        rag_instance = LLMFlow()
+        response = rag_instance.run(query=user_query, context=context, trace_id=trace_id)
+
+        # Check for hallucinations
+        detector = HallucinationDetector(threshold=0.5)
+        hallucination_result = detector.detect(response, context)
+        rag_logger.log_hallucination_check(
+            hallucination_result.score, hallucination_result.is_hallucinating
+        )
+        metrics_collector.record_hallucination(hallucination_result.score)
+
+        return response
+
+    except Exception as e:
+        rag_logger.log_error(e, "RAG pipeline")
+        metrics_collector.record_error(str(e))
+        raise
 
 
 def main():

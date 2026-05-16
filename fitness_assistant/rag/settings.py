@@ -11,6 +11,7 @@ class GenAIModels(str, Enum):
     gemini_2_5_pro = "gemini-2.5-pro"
 
 
+
 class QdrantConfig(BaseSettings):
     """
     Config settings used by Qdrant Vector Db
