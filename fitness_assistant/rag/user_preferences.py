@@ -12,6 +12,7 @@ from enum import Enum
 
 class FitnessLevel(str, Enum):
     """Enumeration of fitness levels."""
+
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"
@@ -21,22 +22,22 @@ class UserProfile(BaseModel):
     """
     Pydantic model for user profile containing fitness preferences.
     """
+
     user_id: Optional[str] = Field(None, description="Unique user identifier")
     fitness_level: FitnessLevel = Field(
-        FitnessLevel.BEGINNER,
-        description="User's fitness level"
+        FitnessLevel.BEGINNER, description="User's fitness level"
     )
     goals: List[str] = Field(
         default_factory=list,
-        description="List of fitness goals (e.g., 'weight loss', 'muscle gain', 'endurance')"
+        description="List of fitness goals (e.g., 'weight loss', 'muscle gain', 'endurance')",
     )
     equipment: List[str] = Field(
         default_factory=list,
-        description="List of available equipment (e.g., 'dumbbells', 'barbell', 'cardio machine')"
+        description="List of available equipment (e.g., 'dumbbells', 'barbell', 'cardio machine')",
     )
     restrictions: List[str] = Field(
         default_factory=list,
-        description="List of physical restrictions or limitations (e.g., 'bad knee', 'shoulder injury')"
+        description="List of physical restrictions or limitations (e.g., 'bad knee', 'shoulder injury')",
     )
 
     @validator("fitness_level", pre=True)
@@ -67,7 +68,7 @@ class PreferenceManager:
     Manages user profiles and applies preference-based filtering to exercises.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the preference manager with empty profile storage."""
         self._profiles: Dict[str, UserProfile] = {}
 
@@ -125,8 +126,7 @@ class PreferenceManager:
 
 
 def filter_exercises_by_profile(
-    exercises: List[Dict[str, Any]],
-    profile: UserProfile
+    exercises: List[Dict[str, Any]], profile: UserProfile
 ) -> List[Dict[str, Any]]:
     """
     Filter exercises based on user profile preferences.
@@ -151,7 +151,9 @@ def filter_exercises_by_profile(
             continue
 
         # Check if exercise matches available equipment
-        if profile.equipment and not _has_matching_equipment(exercise, profile.equipment):
+        if profile.equipment and not _has_matching_equipment(
+            exercise, profile.equipment
+        ):
             continue
 
         # Check if exercise matches fitness level
@@ -163,7 +165,9 @@ def filter_exercises_by_profile(
     return filtered
 
 
-def _has_restricted_exercises(exercise: Dict[str, Any], restrictions: List[str]) -> bool:
+def _has_restricted_exercises(
+    exercise: Dict[str, Any], restrictions: List[str]
+) -> bool:
     """
     Check if exercise conflicts with user restrictions.
 
@@ -180,9 +184,11 @@ def _has_restricted_exercises(exercise: Dict[str, Any], restrictions: List[str])
 
     for restriction in restrictions:
         restriction_lower = restriction.lower()
-        if (restriction_lower in exercise_body_parts or
-            restriction_lower in exercise_muscle_groups or
-            restriction_lower in exercise_instructions):
+        if (
+            restriction_lower in exercise_body_parts
+            or restriction_lower in exercise_muscle_groups
+            or restriction_lower in exercise_instructions
+        ):
             return True
 
     return False
@@ -210,17 +216,20 @@ def _has_matching_equipment(exercise: Dict[str, Any], equipment: List[str]) -> b
 
     for req in required_lower:
         if req and req not in available_lower and req != "bodyweight":
+            # Check if any available equipment matches or contains the required equipment
+            match_found = False
             for avail in available_lower:
-                if req not in avail and avail not in req:
-                    continue
-            return False
+                if req in avail or avail in req or req == avail:
+                    match_found = True
+                    break
+            if not match_found:
+                return False
 
     return True
 
 
 def _matches_fitness_level(
-    exercise: Dict[str, Any],
-    fitness_level: FitnessLevel
+    exercise: Dict[str, Any], fitness_level: FitnessLevel
 ) -> bool:
     """
     Check if exercise is appropriate for user's fitness level.
@@ -234,7 +243,7 @@ def _matches_fitness_level(
     level_mapping = {
         FitnessLevel.BEGINNER: ["beginner", "easy"],
         FitnessLevel.INTERMEDIATE: ["beginner", "intermediate", "moderate"],
-        FitnessLevel.ADVANCED: ["beginner", "intermediate", "advanced", "hard"]
+        FitnessLevel.ADVANCED: ["beginner", "intermediate", "advanced", "hard"],
     }
 
     allowed_difficulties = level_mapping.get(fitness_level, [])

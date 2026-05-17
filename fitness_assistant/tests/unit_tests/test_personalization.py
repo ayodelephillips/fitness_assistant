@@ -32,7 +32,7 @@ class TestUserProfileModel:
             fitness_level=FitnessLevel.INTERMEDIATE,
             goals=["muscle gain", "strength"],
             equipment=["dumbbells", "barbell"],
-            restrictions=["bad knee"]
+            restrictions=["bad knee"],
         )
         assert profile.user_id == "user123"
         assert profile.fitness_level == FitnessLevel.INTERMEDIATE
@@ -95,8 +95,7 @@ class TestPreferenceManager:
     def test_create_profile(self, manager):
         """Test creating a new user profile."""
         profile = UserProfile(
-            fitness_level=FitnessLevel.INTERMEDIATE,
-            goals=["weight loss"]
+            fitness_level=FitnessLevel.INTERMEDIATE, goals=["weight loss"]
         )
         created = manager.create_profile("user1", profile)
         assert created.user_id == "user1"
@@ -128,8 +127,7 @@ class TestPreferenceManager:
         manager.create_profile("user1", profile)
 
         updated_profile = UserProfile(
-            fitness_level=FitnessLevel.ADVANCED,
-            goals=["strength"]
+            fitness_level=FitnessLevel.ADVANCED, goals=["strength"]
         )
         result = manager.update_profile("user1", updated_profile)
         assert result.fitness_level == FitnessLevel.ADVANCED
@@ -166,7 +164,7 @@ class TestExerciseFiltering:
                 "muscle_groups_activated": "quadriceps, glutes",
                 "instructions": "hold dumbbells and squat",
                 "equipment": "dumbbells",
-                "difficulty": "intermediate"
+                "difficulty": "intermediate",
             },
             {
                 "exercise_name": "pushup",
@@ -174,7 +172,7 @@ class TestExerciseFiltering:
                 "muscle_groups_activated": "chest, shoulders",
                 "instructions": "bodyweight exercise",
                 "equipment": "bodyweight",
-                "difficulty": "beginner"
+                "difficulty": "beginner",
             },
             {
                 "exercise_name": "leg press",
@@ -182,7 +180,7 @@ class TestExerciseFiltering:
                 "muscle_groups_activated": "quadriceps, hamstrings",
                 "instructions": "machine leg press",
                 "equipment": "leg press machine",
-                "difficulty": "beginner"
+                "difficulty": "beginner",
             },
             {
                 "exercise_name": "barbell squat",
@@ -190,7 +188,7 @@ class TestExerciseFiltering:
                 "muscle_groups_activated": "quadriceps, glutes, hamstrings",
                 "instructions": "hold barbell and squat",
                 "equipment": "barbell",
-                "difficulty": "advanced"
+                "difficulty": "advanced",
             },
         ]
 
@@ -234,8 +232,7 @@ class TestExerciseFiltering:
     def test_filter_combined_constraints(self, sample_exercises):
         """Test filtering with equipment and fitness level constraints."""
         profile = UserProfile(
-            fitness_level=FitnessLevel.BEGINNER,
-            equipment=["dumbbells"]
+            fitness_level=FitnessLevel.BEGINNER, equipment=["dumbbells"]
         )
         filtered = filter_exercises_by_profile(sample_exercises, profile)
 
@@ -267,7 +264,7 @@ class TestExerciseFiltering:
         profile = UserProfile(fitness_level=FitnessLevel.ADVANCED)
         filtered = filter_exercises_by_profile(sample_exercises, profile)
 
-        exercise_names = [ex["exercise_name"] for ex in filtered]
+        # exercise_names = [ex["exercise_name"] for ex in filtered]
         # Advanced should include all exercises
         assert len(filtered) == 4
 
@@ -291,7 +288,7 @@ class TestEdgeCases:
         """Test profile handles special characters."""
         profile = UserProfile(
             goals=["weight loss/fat burn", "build muscle-endurance"],
-            equipment=["dumbbell (5lb)"]
+            equipment=["dumbbell (5lb)"],
         )
         assert len(profile.goals) == 2
         assert len(profile.equipment) == 1
@@ -300,7 +297,7 @@ class TestEdgeCases:
         """Test filtering exercises with missing fields."""
         exercises = [
             {"exercise_name": "test exercise"},  # Missing most fields
-            {"body_part": "chest"}  # Missing exercise_name
+            {"body_part": "chest"},  # Missing exercise_name
         ]
         profile = UserProfile()
         filtered = filter_exercises_by_profile(exercises, profile)
@@ -311,7 +308,7 @@ class TestEdgeCases:
         """Test that normalization doesn't lose data."""
         profile = UserProfile(
             goals=["Weight Loss", "MUSCLE GAIN", "weight loss"],
-            equipment=["DUMBBELLS", "dumbbells", "Barbell"]
+            equipment=["DUMBBELLS", "dumbbells", "Barbell"],
         )
         assert len(profile.goals) == 3  # All three entries preserved
         assert len(profile.equipment) == 3
