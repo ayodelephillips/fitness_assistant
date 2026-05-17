@@ -12,7 +12,6 @@ from fitness_assistant.rag.validators import validate_user_input, validate_llm_r
 from fitness_assistant.rag.monitoring import (
     get_metrics_collector,
     HallucinationDetector,
-    QueryRateLimiter,
     RetrievalMetrics,
     GenerationMetrics,
 )
@@ -31,9 +30,9 @@ import time
 import uuid
 from rich.console import Console
 from rich.prompt import Prompt
-from rich.logging import RichHandler
 
 import logging
+from typing import List, Any
 
 # Configure structured logging
 configure_logging(level=logging.INFO)
@@ -347,8 +346,225 @@ class ManageVectorDb:
             self.metrics_collector.record_error(str(e))
             raise
 
+    def expand_query(self, query: str) -> List[str]:
+        """
+        Expand query with synonyms and related terms for better recall
+        """
+        # Fitness-specific synonyms and related terms
+        fitness_synonyms = {
+            "push": ["press", "extend", "push away"],
+            "pull": ["row", "curl", "draw in"],
+            "hold": ["plank", "static", "isometric"],
+            "strength": ["resistance", "weight", "muscle building"],
+            "stretching": ["flexibility", "mobility", "flex"],
+            "cardio": ["aerobic", "endurance", "heart"],
+            "upper body": ["chest", "back", "shoulders", "arms"],
+            "lower body": ["legs", "quads", "hamstrings", "glutes"],
+            "core": ["abs", "abdominals", "midsection"],
+        }
 
-def rag(user_query: str, config: QdrantConfig | None = None, user_profile: UserProfile | None = None):
+        expanded_queries = [query]
+        query_lower = query.lower()
+
+        # Add synonym-based expansions
+        for key, synonyms in fitness_synonyms.items():
+            if key in query_lower:
+                for synonym in synonyms:
+                    expanded_query = query_lower.replace(key, synonym)
+                    if expanded_query != query_lower:
+                        expanded_queries.append(expanded_query)
+
+        # Add common exercise variations
+        exercise_variations = {
+            "squat": ["squats", "bodyweight squat", "air squat"],
+            "push-up": ["pushup", "press up", "chest press"],
+            "deadlift": ["dead lifts", "dl", "hip hinge"],
+            "plank": ["front plank", "abdominal plank", "core hold"],
+        }
+
+        for key, variations in exercise_variations.items():
+            if key in query_lower:
+                expanded_queries.extend([v for v in variations if v not in query_lower])
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_queries = []
+        for q in expanded_queries:
+            if q not in seen:
+                seen.add(q)
+                unique_queries.append(q)
+
+        return unique_queries[:5]  # Limit to top 5 expansions
+
+    def hybrid_search(self, query: str, trace_id: str = "", alpha: float = 0.7) -> Any:
+        """
+        Perform hybrid search combining vector and keyword search
+        alpha: weight for vector search (1-alpha for keyword search)
+        """
+        if not trace_id:
+            trace_id = str(uuid.uuid4())
+
+        rag_logger = RAGLogger(trace_id)
+        start_time = time.time()
+        rag_logger.log_retrieval_start()
+
+        try:
+            # Get expanded queries
+            expanded_queries = self.expand_query(query)
+
+            # Vector search with original and expanded queries
+            all_vector_results = []
+            for exp_query in expanded_queries:
+                vector_results = self.client.query_points(
+                    collection_name=self.qdrant_config.collection_name,
+                    query=models.Document(
+                        text=exp_query, model=self.qdrant_config.embedding_model
+                    ),
+                    limit=self.qdrant_config.response_limit * 2,  # Get more for fusion
+                    with_payload=True,
+                )
+                all_vector_results.extend(vector_results.points)
+
+            # Simple keyword search (text matching in payload)
+            keyword_results = []
+            query_terms = set(query.lower().split())
+            for point in self.client.scroll(
+                collection_name=self.qdrant_config.collection_name,
+                limit=1000,  # Reasonable limit for keyword search
+                with_payload=True,
+            )[0]:
+                payload_text = " ".join(
+                    [
+                        str(point.payload.get("exercise_name", "")),
+                        str(point.payload.get("type_of_activity", "")),
+                        str(point.payload.get("body_part", "")),
+                        str(point.payload.get("muscle_groups_activated", "")),
+                        str(point.payload.get("instructions", "")),
+                    ]
+                ).lower()
+
+                # Calculate simple keyword match score
+                payload_terms = set(payload_text.split())
+                match_score = len(query_terms.intersection(payload_terms)) / max(
+                    len(query_terms), 1
+                )
+
+                if match_score > 0:
+                    # Create a scored point-like object for keyword results
+                    keyword_results.append(
+                        {"point": point, "score": match_score, "type": "keyword"}
+                    )
+
+            # Combine and rerank results
+            combined_results = self._combine_and_rerank(
+                all_vector_results,
+                keyword_results,
+                alpha=alpha,
+                limit=self.qdrant_config.response_limit,
+            )
+
+            response_time_ms = (time.time() - start_time) * 1000
+            scores = (
+                [p.score for p in combined_results.points]
+                if combined_results.points
+                else []
+            )
+            top_score = max(scores) if scores else 0.0
+
+            rag_logger.log_retrieval_complete(
+                num_results=len(combined_results.points),
+                scores=scores,
+                response_time_ms=response_time_ms,
+            )
+
+            self.metrics_collector.record_retrieval(
+                RetrievalMetrics(
+                    num_results=len(combined_results.points),
+                    scores=scores,
+                    response_time_ms=response_time_ms,
+                    top_score=top_score,
+                )
+            )
+
+            return combined_results
+
+        except Exception as e:
+            rag_logger.log_error(e, "Hybrid vector DB retrieval")
+            self.metrics_collector.record_error(str(e))
+            raise
+
+    def _combine_and_rerank(
+        self, vector_results, keyword_results, alpha: float, limit: int
+    ):
+        """
+        Combine vector and keyword search results using reciprocal rank fusion
+        """
+
+        # Create dictionaries for scoring
+        vector_scores = {}
+        keyword_scores: dict[str, float] = {}
+
+        # Score vector results (higher score = better)
+        for i, point in enumerate(vector_results):
+            vector_scores[point.id] = 1.0 / (i + 1)  # Reciprocal rank
+
+        # Score keyword results
+        for i, item in enumerate(keyword_results):
+            point_id = item["point"].id
+            keyword_scores[point_id] = keyword_scores.get(point_id, 0) + (1.0 / (i + 1))
+
+        # Combine scores
+        all_point_ids = set(vector_scores.keys()) | set(keyword_scores.keys())
+        combined_scores = {}
+
+        for point_id in all_point_ids:
+            vector_score = vector_scores.get(point_id, 0)
+            keyword_score = keyword_scores.get(point_id, 0)
+            # Normalize and combine
+            combined_scores[point_id] = (
+                alpha * vector_score + (1 - alpha) * keyword_score
+            )
+
+        # Sort by combined score and get top results
+        sorted_ids = sorted(
+            combined_scores.keys(), key=lambda x: combined_scores[x], reverse=True
+        )[:limit]
+
+        # Create a mock results object similar to query_points response
+        class MockResults:
+            def __init__(self, points=None):
+                self.points = points if points is not None else []
+
+        # Retrieve full points for selected IDs
+        if sorted_ids:
+            # Get points by ID (simplified - in production you'd use retrieve)
+            final_points = []
+            vector_points_dict = {p.id: p for p in vector_results}
+
+            for point_id in sorted_ids:
+                if point_id in vector_points_dict:
+                    # Create a copy with updated score for hybrid ranking
+                    point = vector_points_dict[point_id]
+                    # We'll store the hybrid score separately for logging
+                    final_points.append(point)
+                else:
+                    # Find from keyword results
+                    for item in keyword_results:
+                        if item["point"].id == point_id:
+                            final_points.append(item["point"])
+                            break
+
+            return MockResults(final_points)
+        else:
+            # Return empty results
+            return MockResults([])
+
+
+def rag(
+    user_query: str,
+    config: QdrantConfig | None = None,
+    user_profile: UserProfile | None = None,
+):
     """
     Entrypoint for the RAG pipeline.
     Recieves user's query, get vectors from Vector db, and return LLM response
@@ -379,17 +595,22 @@ def rag(user_query: str, config: QdrantConfig | None = None, user_profile: UserP
         if vector_db.qdrant_config.create_vectors:
             vector_db.run_vector_embedding()
 
-        # search with vector
-        results = vector_db.search(query=user_query, trace_id=trace_id)
-        
+        # search with vector - use hybrid search for better results
+        # Toggle between vector and hybrid search via config or parameter
+        use_hybrid_search = getattr(vector_db.qdrant_config, "use_hybrid_search", False)
+        if use_hybrid_search:
+            results = vector_db.hybrid_search(query=user_query, trace_id=trace_id)
+        else:
+            results = vector_db.search(query=user_query, trace_id=trace_id)
+
         # Apply user profile filtering if provided
         if user_profile and results.points:
             exercises = [point.payload for point in results.points]
             filtered_exercises = filter_exercises_by_profile(exercises, user_profile)
-            
+
             if filtered_exercises:
                 # Update results with filtered exercises
-                from qdrant_client.http import models as qdrant_models
+
                 filtered_points = []
                 for idx, exercise in enumerate(filtered_exercises):
                     for point in results.points:
@@ -397,7 +618,7 @@ def rag(user_query: str, config: QdrantConfig | None = None, user_profile: UserP
                             filtered_points.append(point)
                             break
                 results.points = filtered_points
-        
+
         context = format_vector_db_context(results.points)
 
         display_rag_response(
@@ -405,7 +626,9 @@ def rag(user_query: str, config: QdrantConfig | None = None, user_profile: UserP
         )
 
         rag_instance = LLMFlow()
-        response = rag_instance.run(query=user_query, context=context, trace_id=trace_id)
+        response = rag_instance.run(
+            query=user_query, context=context, trace_id=trace_id
+        )
 
         # Check for hallucinations
         detector = HallucinationDetector(threshold=0.5)
