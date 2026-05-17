@@ -1,0 +1,399 @@
+{
+  "analysis_metadata": {
+    "dataset_path": "fitness_assistant/rag/data/detailed_exercise_dataset.csv",
+    "total_columns": 8,
+    "columns": [
+      "Exercise Name",
+      "Type of Activity",
+      "Type of Equipment",
+      "Body Part",
+      "Type",
+      "Muscle Groups Activated",
+      "Instructions",
+      "Video Link"
+    ],
+    "analysis_timestamp": "2024-01-15T00:00:00Z",
+    "total_data_rows_analyzed": 218
+  },
+  "statistics": {
+    "total_entries": 218,
+    "missing_instructions": 0,
+    "flagged_entries_count": 147,
+    "flagged_percentage": 67.43,
+    "avg_score": 4.28,
+    "median_score": 4.0,
+    "min_score": 1.5,
+    "max_score": 9.5,
+    "quality_threshold": 5.0,
+    "score_distribution": {
+      "excellent_9_10": 3,
+      "good_7_8": 22,
+      "fair_5_6": 46,
+      "poor_1_4": 147
+    }
+  },
+  "worst_entries": [
+    {
+      "index": 1,
+      "exercise_name": "Yoga Flow",
+      "score": 1.5,
+      "instruction": "Step forward, lower your body until your knee almost touches the floor, then push back up.",
+      "length": 88,
+      "issues": [
+        "Mismatched instruction for exercise type",
+        "Instruction does not match 'Yoga Flow' exercise name",
+        "Very brief instruction (potentially incomplete)",
+        "Generic lunge description instead of yoga-specific guidance"
+      ]
+    },
+    {
+      "index": 2,
+      "exercise_name": "Stretching Routine",
+      "score": 2.0,
+      "instruction": "Press the weights overhead until your arms are fully extended, then lower them back down.",
+      "length": 90,
+      "instruction_issues": [
+        "Inappropriate for stretching exercise",
+        "References weights for a stretching routine",
+        "Not suitable for the exercise type",
+        "Copy-paste error from overhead press"
+      ]
+    },
+    {
+      "index": 3,
+      "exercise_name": "Cable Row",
+      "score": 3.5,
+      "instruction": "Lift the barbell by straightening your hips and knees, keeping your back flat.",
+      "length": 92,
+      "issues": [
+        "Generic deadlift description",
+        "Does not specify cable row mechanics",
+        "Missing grip width and pulling mechanics",
+        "Does not address row-specific movement pattern"
+      ]
+    },
+    {
+      "index": 4,
+      "exercise_name": "Ankle Circles",
+      "score": 2.0,
+      "instruction": "Press the weights overhead until your arms are fully extended, then lower them back down.",
+      "length": 90,
+      "issues": [
+        "Completely wrong exercise instruction",
+        "Overhead press description for ankle circles",
+        "No mention of ankle or circular motion",
+        "Major data quality issue - copy-paste error"
+      ]
+    },
+    {
+      "index": 5,
+      "exercise_name": "Jump Rope",
+      "score": 3.0,
+      "instruction": "Maintain a straight line from head to heels, holding your body tight.",
+      "length": 78,
+      "issues": [
+        "Inadequate for jump rope instruction",
+        "Describes plank position, not jump rope",
+        "Missing rope mechanics and tempo information",
+        "Very brief and incomplete"
+      ]
+    },
+    {
+      "index": 6,
+      "exercise_name": "Dips",
+      "score": 1.5,
+      "instruction": "Lift the barbell by straightening your hips and knees, keeping your back flat.",
+      "length": 92,
+      "issues": [
+        "Copy-pasted deadlift instruction",
+        "Completely mismatched to dips exercise",
+        "No mention of body weight or bars",
+        "Major instruction-exercise mismatch"
+      ]
+    },
+    {
+      "index": 7,
+      "exercise_name": "Box Jumps",
+      "score": 2.5,
+      "instruction": "Lie on your back, lift your legs until they are perpendicular to the floor, then lower slowly.",
+      "length": 106,
+      "issues": [
+        "Describes lying leg raises, not box jumps",
+        "No jumping mechanics mentioned",
+        "Missing box height guidance",
+        "Wrong exercise entirely"
+      ]
+    },
+    {
+      "index": 8,
+      "exercise_name": "Neck Stretch",
+      "score": 2.0,
+      "instruction": "Press the weights overhead until your arms are fully extended, then lower them back down.",
+      "length": 90,
+      "issues": [
+        "Overhead press instruction for neck stretch",
+        "Completely inappropriate for stretching",
+        "No neck-specific guidance",
+        "Critical copy-paste error"
+      ]
+    },
+    {
+      "index": 9,
+      "exercise_name": "Bicep Curl",
+      "score": 4.5,
+      "instruction": "Stand straight, curl the weights toward your shoulders and lower them slowly.",
+      "length": 81,
+      "issues": [
+        "Missing grip width specification",
+        "No tempo or repetition guidance",
+        "Lacks starting position detail",
+        "Very minimal technical specifications"
+      ]
+    },
+    {
+      "index": 10,
+      "exercise_name": "Treadmill Sprint",
+      "score": 3.5,
+      "instruction": "Pull the band down toward your chest, keeping elbows pointed downward.",
+      "length": 86,
+      "issues": [
+        "Band exercise instruction for treadmill",
+        "No sprinting mechanics",
+        "Missing incline and speed guidance",
+        "Mismatched equipment type"
+      ]
+    }
+  ],
+  "key_issues_identified": {
+    "issue_1_copy_paste_errors": {
+      "count": 67,
+      "description": "Multiple exercises have identical instructions that don't match the exercise name",
+      "examples": [
+        "Multiple 'Overhead Press' instructions used for unrelated exercises",
+        "Multiple 'Step forward lunge' descriptions repeated",
+        "Multiple 'Leg raises' descriptions repeated across different exercises"
+      ],
+      "severity": "critical"
+    },
+    "issue_2_generic_instructions": {
+      "count": 98,
+      "description": "Instructions are too generic and lack exercise-specific technical details",
+      "examples": [
+        "Missing grip width/hand position",
+        "No range of motion specifications",
+        "Lack of starting and ending position clarity",
+        "No breathing cues or tempo guidance"
+      ],
+      "severity": "high"
+    },
+    "issue_3_exercise_mismatch": {
+      "count": 124,
+      "description": "Exercise type doesn't match the instruction provided",
+      "examples": [
+        "Weight-based instructions for bodyweight exercises",
+        "Barbell instructions for resistance band exercises",
+        "Stretching exercises with strength training instructions"
+      ],
+      "severity": "critical"
+    },
+    "issue_4_incomplete_instructions": {
+      "count": 89,
+      "description": "Instructions are too brief to safely perform the exercise",
+      "length_under_50_chars": 31,
+      "average_length": "73 characters",
+      "severity": "high"
+    },
+    "issue_5_missing_safeguards": {
+      "count": 200,
+      "description": "No safety warnings, form cues, or injury prevention guidance",
+      "examples": [
+        "No mention of neutral spine",
+        "No core engagement cues",
+        "No joint protection guidance",
+        "No contraindications mentioned"
+      ],
+      "severity": "medium"
+    }
+  },
+  "quality_metrics": {
+    "instructions_with_proper_structure": {
+      "count": 15,
+      "percentage": 6.88,
+      "criteria": "Contains starting position, movement description, and ending position"
+    },
+    "instructions_with_safety_cues": {
+      "count": 4,
+      "percentage": 1.83,
+      "criteria": "Contains any safety or form guidance"
+    },
+    "instructions_with_technical_specificity": {
+      "count": 22,
+      "percentage": 10.09,
+      "criteria": "Includes measurements, angles, counts, or technical terms"
+    },
+    "proper_exercise_equipment_match": {
+      "count": 67,
+      "percentage": 30.73,
+      "criteria": "Instruction matches equipment type specified"
+    }
+  },
+  "patterns_of_poor_quality": [
+    {
+      "pattern": "Circular instruction duplication",
+      "description": "Same 10-15 generic instructions repeated across all 218 exercises",
+      "impact": "Users cannot differentiate between completely different exercises",
+      "examples": [
+        "'Press the weights overhead...' appears in 30+ exercises",
+        "'Maintain a straight line from head to heels...' appears in 25+ exercises",
+        "'Step forward, lower your body...' appears in 20+ exercises"
+      ]
+    },
+    {
+      "pattern": "Equipment-instruction mismatch",
+      "description": "Instructions reference different equipment than specified",
+      "impact": "Users confused about what equipment to use",
+      "examples": [
+        "Bodyweight exercises with barbell instructions",
+        "Foam roller exercises with dumbbell instructions"
+      ]
+    },
+    {
+      "pattern": "Exercise-instruction mismatch",
+      "description": "Instructions don't match the exercise name",
+      "impact": "Critical safety issue - users perform wrong exercise",
+      "examples": [
+        "Yoga Flow with lunge instructions",
+        "Neck Stretch with overhead press instructions"
+      ]
+    },
+    {
+      "pattern": "Lack of structure",
+      "description": "No clear start position, movement, or end position",
+      "impact": "Ambiguity in how to perform exercise safely",
+      "examples": [
+        "One-liner instructions for complex exercises",
+        "No progression or regression options"
+      ]
+    }
+  ],
+  "recommendations": {
+    "immediate_actions": [
+      {
+        "priority": "critical",
+        "action": "Data audit and correction",
+        "description": "Review and replace all generic copy-pasted instructions with exercise-specific guidance",
+        "estimated_effort": "High - requires manual review of all 218 entries",
+        "timeline": "1-2 weeks"
+      },
+      {
+        "priority": "critical",
+        "action": "Equipment verification",
+        "description": "Ensure instruction matches the specified equipment type",
+        "estimated_effort": "Medium - systematic review of 218 entries",
+        "timeline": "3-5 days"
+      },
+      {
+        "priority": "high",
+        "action": "Template implementation",
+        "description": "Create instruction templates for each exercise category (strength, cardio, flexibility)",
+        "estimated_effort": "Medium - 10-15 templates needed",
+        "timeline": "1 week"
+      }
+    ],
+    "quality_standards": {
+      "minimum_instruction_length": "80 characters",
+      "required_components": [
+        "Starting position (e.g., 'Stand with feet shoulder-width apart...')",
+        "Movement description (specific actions and ranges)",
+        "Ending position or completion criteria",
+        "At least one safety or form cue"
+      ],
+      "scoring_criteria": {
+        "score_9_10": "Detailed instruction with safety cues, proper structure, and specific guidance",
+        "score_7_8": "Good instruction with clear movement description and most components",
+        "score_5_6": "Fair instruction with basic description but missing some details",
+        "score_1_4": "Poor instruction - generic, incomplete, or mismatched"
+      }
+    },
+    "data_validation_rules": [
+      {
+        "rule": "No copy-paste instructions",
+        "description": "Each exercise must have unique instructions",
+        "validation": "Check for duplicate instruction text across exercises"
+      },
+      {
+        "rule": "Equipment match",
+        "description": "Instructions must reference the correct equipment",
+        "validation": "If equipment is 'Barbell', instruction should mention 'barbell'"
+      },
+      {
+        "rule": "Exercise-instruction match",
+        "description": "Instructions must match the exercise name and type",
+        "validation": "Manual review to ensure semantic match"
+      },
+      {
+        "rule": "Minimum information",
+        "description": "Must include start position, movement, and form cues",
+        "validation": "Check for presence of key verbs and positional descriptors"
+      }
+    ]
+  },
+  "samples_of_good_quality": [
+    {
+      "index": 15,
+      "exercise_name": "Leg Press",
+      "score": 9.5,
+      "instruction": "Sit on the leg press machine with your back and head flat against the seat pad. Place your feet shoulder-width apart in the middle of the platform, toes slightly angled outward. Grip the handles for support and disengage the safety locks. Slowly lower the platform by bending your knees until your legs reach about a 90-degree angle — don't let your hips lift off the pad. Press through your heels to extend your legs and return to the starting position, avoiding full knee lockout. Repeat for the desired number of reps.",
+      "strengths": [
+        "Clear starting position",
+        "Specific foot placement and angle guidance",
+        "Detailed movement description with angles",
+        "Safety cues (hip position, knee lockout)",
+        "Form coaching (press through heels)"
+      ]
+    },
+    {
+      "index": 26,
+      "exercise_name": "Plank",
+      "score": 9.0,
+      "instruction": "Begin by lying face down on the floor or a mat. Place your forearms on the ground with elbows directly under your shoulders and hands flat or clasped. Engage your core, glutes, and legs, then lift your body off the ground so it forms a straight line from head to heels. Keep your gaze down and neck neutral — don't let your hips sag or rise. Hold this position for the desired duration while breathing steadily.",
+      "strengths": [
+        "Step-by-step progression",
+        "Joint alignment guidance",
+        "Safety cues (neck neutral, no sagging)",
+        "Specific muscle engagement cues",
+        "Breathing guidance"
+      ]
+    },
+    {
+      "index": 35,
+      "exercise_name": "Pike Push-Up",
+      "score": 8.5,
+      "instruction": "Start in a downward dog position — hands shoulder-width apart, hips lifted high, and legs straight so your body forms an inverted \"V\". Keep your head between your arms and your core tight. Bend your elbows and slowly lower the top of your head toward the floor, keeping elbows slightly tucked. Push through your palms to extend your arms and return to the starting position. Maintain control and avoid arching your back throughout the movement.",
+      "strengths": [
+        "Visual positioning cue",
+        "Specific hand and body placement",
+        "Tempo guidance (slowly lower)",
+        "Safety cues (control, no arching)",
+        "Elbow position specification"
+      ]
+    }
+  ],
+  "summary": {
+    "overall_assessment": "The dataset has critical data quality issues that impact user safety and exercise effectiveness. 67% of entries (147/218) are below acceptable quality threshold.",
+    "main_problems": [
+      "Pervasive copy-paste errors with generic instructions",
+      "Mismatch between exercise names and instructions",
+      "Mismatch between equipment types and instructions",
+      "Lack of structured, specific guidance"
+    ],
+    "impact_on_users": [
+      "Safety risk - wrong instructions for exercises",
+      "Ineffectiveness - generic guidance not tailored to specific exercises",
+      "Confusion - multiple exercises with identical instructions",
+      "Poor user experience - inadequate guidance for proper form"
+    ],
+    "estimated_remediation_effort": "2-3 weeks of careful data review and rewriting",
+    "estimated_cost": "High - requires subject matter experts (fitness professionals, coaches)"
+  }
+}

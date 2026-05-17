@@ -48,6 +48,7 @@ class QdrantConfig(BaseSettings):
             "video_link": "Video link",
         },
     )
+    use_hybrid_search: bool = False  # Enable hybrid search (vector + keyword)
 
 
 class LlmConfig(BaseSettings):
@@ -59,7 +60,7 @@ class LlmConfig(BaseSettings):
     system_prompt: str = (
         """
         You're a fitness instructor. Answer the QUESTION based on the CONTEXT from our exercises database.
-        Use only the facts from the CONTEXT when answering the QUESTION.
+        íUse only the facts from the CONTEXT when answering the QUESTION.
         Ensure to include multiple exercises, alongside the type of activity, equipment, body part, muscle group activated and instructions
 
 
