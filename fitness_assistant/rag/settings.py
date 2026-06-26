@@ -18,7 +18,7 @@ class QdrantConfig(BaseSettings):
 
     collection_name: str = "exercise_collection"
     cluster_url: str = (
-        "https://51ddb13e-4d76-493c-98f3-8cd6c1319268.europe-west3-0.gcp.cloud.qdrant.io:6333"
+        "https://34cba4ea-16d6-437d-a2f0-fb3994091fbd.eu-west-2-0.aws.cloud.qdrant.io:6333"
     )
     qdrant_api_key: str
     model_config = SettingsConfigDict(
@@ -55,7 +55,7 @@ class LlmConfig(BaseSettings):
     Config settings used by the LLM
     """
 
-    model_name: str = GenAIModels.gemini_2_5_pro
+    model_name: str = GenAIModels.gemini_2_5_flash
     system_prompt: str = (
         """
         You're a fitness instructor. Answer the QUESTION based on the CONTEXT from our exercises database.
