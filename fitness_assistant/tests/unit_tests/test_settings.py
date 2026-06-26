@@ -67,7 +67,7 @@ def test_llm_config_defaults(monkeypatch):
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
     config = LlmConfig()
 
-    assert config.model_name == GenAIModels.gemini_2_5_pro
+    assert config.model_name == GenAIModels.gemini_2_5_flash
     assert config.temperature == 0.4
     assert config.top_p == 1
     assert config.top_k == 1
