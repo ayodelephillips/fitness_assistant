@@ -93,9 +93,11 @@ class RagEvaluator:
             "query": query,
         }
 
-    def evaluate(self, eval_set: EvaluationSet):
+    def evaluate(self, eval_set: EvaluationSet) -> None:
         """
         Evaluates the RAG system against a full evaluation set.
+
+        params: eval_set - An EvaluationSet containing multiple EvaluationCase instances.
         """
         test_cases = []
         for case in eval_set.cases:
@@ -140,8 +142,14 @@ class RagEvaluator:
         print("--- RAG Evaluation Complete ---")
 
 
+# if __name__ == "__main__":
+#     evaluation_set = get_evaluation_set()
+#     logging.info(f"Evaluation set: {evaluation_set}")
+#     evaluator = RagEvaluator()
+#     evaluator.evaluate(evaluation_set)
+
 if __name__ == "__main__":
-    evaluation_set = get_evaluation_set()
-    logging.info(f"Evaluation set: {evaluation_set}")
-    evaluator = RagEvaluator()
-    evaluator.evaluate(evaluation_set)
+    config = LlmConfig()
+    eval_model = GeminiModel(
+        model_name=GenAIModels.gemini_2_5_flash, api_key=config.google_api_key
+    )
