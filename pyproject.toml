@@ -10,13 +10,14 @@ python = "^3.12"
 pandas = "2.2.3"
 langchain = "*"
 langchain-community = "*"
-qdrant-client = {version = ">=1.14.2", extras = ["fastembed"]}
+qdrant-client = {version = ">=1.15.1", extras = ["fastembed"]}
 huggingface-hub = {version = "*", extras = ["hf_xet"]}
 langchain-google-genai = "^2.1.12"
 langchain-core = "^0.3.78"
 pytest = "^8.4.2"
 deepeval = "^3.6.6"
 rich = "^14.2.0"
+langsmith = "^0.9.3"
 
 [tool.poetry.group.dev.dependencies]
 tqdm = "*"

@@ -17,7 +17,7 @@ import argparse
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.logging import RichHandler
-
+from langsmith import traceable
 import logging
 
 # logging.basicConfig(level=logging.INFO)
@@ -56,6 +56,7 @@ class LLMFlow:
             ]
         )
 
+    @traceable(name="llm connection", run_type="llm")
     def _connect_to_llm(self) -> ChatGoogleGenerativeAI:
         """
         Instantiate llm connection using the chat google generative ai
@@ -70,13 +71,16 @@ class LLMFlow:
             safety_settings=self.llm_config.safety_settings,
         )
 
+    @traceable(name="build_chain", run_type="chain")
     def _build_chain(self):
         """
         Build llm chain
         """
         try:
             prompt = self.get_prompt_from_template()
-            chain = prompt | self.llm
+            chain = (prompt | self.llm).with_config(
+                {"run_name": "fitness_assistant_rag_chain"}
+            )
         except ValueError as val_err:
             logging.error(
                 f"Could not build chain sucessfully. Ensure prompt follows expected template. error is {val_err}"
@@ -85,6 +89,7 @@ class LLMFlow:
             return chain
         return None
 
+    @traceable(name="rag_flow_run", run_type="llm")
     def run(self, query: str, context: str):
         """
         Run the rag flow
@@ -128,6 +133,7 @@ class ManageVectorDb:
         """
         return QdrantClient(url=url, api_key=api_key)
 
+    @traceable(name="create_collection", run_type="chain")
     def create_collection(self, collection_name: str, embedding_dimension: int):
         """
         Create a collection that will store all the data points
@@ -176,6 +182,7 @@ class ManageVectorDb:
         """
         return {k: record[k] for k, v in context_mapping.items()}
 
+    @traceable(name="convert_documents_to_points", run_type="embedding")
     def convert_documents_to_points(self, document: list[dict], embedding_model: str):
         points = []
         for idx, record in enumerate(document):
@@ -192,6 +199,7 @@ class ManageVectorDb:
             points.append(point)
         return points
 
+    @traceable(name="create_points_and_insert", run_type="chain")
     def create_points_and_insert(self, document: list[dict], embedding_model: str):
         """
         Create vector data points from the document
@@ -210,6 +218,7 @@ class ManageVectorDb:
         )
         logging.info("Vector Points successfully inserted..")
 
+    @traceable(name="run_vector_embedding", run_type="chain")
     def run_vector_embedding(self):
         """
         load and clean document
@@ -255,6 +264,7 @@ class ManageVectorDb:
         collections = self.client.get_collections().collections
         return any(c.name == self.qdrant_config.collection_name for c in collections)
 
+    @traceable(name="search_vector_db", run_type="retriever")
     def search(self, query: str):
         """
         Search for vector in vector db
@@ -268,6 +278,7 @@ class ManageVectorDb:
         return results
 
 
+# @traceable(name="rag-pipeline", run_type="chain")
 def rag(user_query: str, config: QdrantConfig | None = None):
     """
     Entrypoint for the RAG pipeline.
@@ -295,6 +306,7 @@ def rag(user_query: str, config: QdrantConfig | None = None):
     return rag_instance.run(query=user_query, context=context)
 
 
+@traceable(name="fitness assistant rag pipeline parser", run_type="parser")
 def main():
     """
     Using Argparser, guide the user through the RAG pipeline

@@ -188,6 +188,10 @@ v. Deepeval goes through each test case, uses Gemini to score actual output agai
 4. Improve data quality(Instructions column)
 5. Retrieval quality [using HSNW](https://qdrant.tech/documentation/beginner-tutorials/retrieval-quality/)
 6. Increase data used for building vector db
+7. improve data quality
+8. add streamlit frontend
+9. llm-as-a-judge
+
 
 
 
