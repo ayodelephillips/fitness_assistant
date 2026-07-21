@@ -47,15 +47,26 @@ def test_qdrant_config_env_override(mock_load_dotenv, monkeypatch):
 
 @patch("dotenv.load_dotenv")
 def test_qdrant_config_document_location(mock_load_dotenv, monkeypatch):
-    """Tests that the document_location path is constructed correctly."""
+    """Tests that the document_location path points at the V2 JSON dataset."""
     monkeypatch.setenv("QDRANT_API_KEY", "test-key")
     config = QdrantConfig()
     assert str(config.document_location).endswith(
-        "rag/data/detailed_exercise_dataset.csv".replace("/", os.path.sep)
+        "rag/data/detailed_exercise_dataset_v2.json".replace("/", os.path.sep)
     )
-    print("LOCATION!!!!!!!!")
-    print(config.document_location)
     assert isinstance(config.document_location, Path)
+
+
+@patch("dotenv.load_dotenv")
+def test_qdrant_config_context_mapping_includes_v2_fields(
+    mock_load_dotenv, monkeypatch
+):
+    """context_mapping should expose description and variations from V2."""
+    monkeypatch.setenv("QDRANT_API_KEY", "test-key")
+    config = QdrantConfig()
+    assert "description" in config.context_mapping
+    assert "variations_on" in config.context_mapping
+    assert config.context_mapping["description"] == "Description"
+    assert config.context_mapping["variations_on"] == "Variations"
 
 
 def test_llm_config_defaults(monkeypatch):

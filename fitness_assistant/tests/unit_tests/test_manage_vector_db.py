@@ -44,13 +44,64 @@ def test_get_text_embedding_string():
     """
     record = {
         "exercise_name": "Test Curl",
+        "type_of_activity": "strength",
+        "type_of_equipment": "dumbbell",
+        "muscle_groups_activated": "Biceps",
+        "body_part": "Arms",
+        "description": "Isolation curl",
+        "instructions": "Curl it.",
+    }
+    embedding_string = ManageVectorDb.get_text_embedding_string(record)
+    expected_string = (
+        "Exercise Name: Test Curl — "
+        "Type of Activity: strength — "
+        "Equipment: dumbbell — "
+        "Muscle Groups: Biceps — "
+        "Body Part: Arms — "
+        "Description: Isolation curl — "
+        "Instructions: Curl it."
+    )
+    assert embedding_string == expected_string
+
+
+def test_get_text_embedding_string_without_description():
+    """Description is optional and should be omitted when empty."""
+    record = {
+        "exercise_name": "Test Curl",
+        "type_of_activity": "strength",
+        "type_of_equipment": "dumbbell",
         "muscle_groups_activated": "Biceps",
         "body_part": "Arms",
         "instructions": "Curl it.",
     }
     embedding_string = ManageVectorDb.get_text_embedding_string(record)
-    expected_string = "Exercise Name: Test Curl — Muscle Groups: Biceps — Body Part: Arms — Instructions: Curl it."
-    assert embedding_string == expected_string
+    assert "Description:" not in embedding_string
+    assert "Exercise Name: Test Curl" in embedding_string
+    assert "Instructions: Curl it." in embedding_string
+
+
+def test_get_payload():
+    """Payload should include all context_mapping keys, defaulting missing ones to empty string."""
+    record = {
+        "exercise_name": "Test Curl",
+        "type_of_activity": "strength",
+        "instructions": "Curl it.",
+    }
+    context_mapping = {
+        "exercise_name": "Exercise",
+        "type_of_activity": "Type of activity",
+        "type_of_equipment": "Equipment",
+        "instructions": "Instructions",
+        "description": "Description",
+    }
+    payload = ManageVectorDb.get_payload(record, context_mapping)
+    assert payload == {
+        "exercise_name": "Test Curl",
+        "type_of_activity": "strength",
+        "type_of_equipment": "",
+        "instructions": "Curl it.",
+        "description": "",
+    }
 
 
 @patch("fitness_assistant.rag.llm_interface.QdrantClient")

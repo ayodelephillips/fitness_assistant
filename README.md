@@ -191,7 +191,7 @@ v. Deepeval goes through each test case, uses Gemini to score actual output agai
 7. improve data quality
 8. add streamlit frontend
 9. llm-as-a-judge
-
+10. MCP in projects
 
 
 
@@ -221,3 +221,38 @@ Attempt | temperature(0.4) |top_k(1) | top_p(1) | max_output_tokens(4000)
 --- | --- | --- | --- |---
 what it contols? | Governs model randomness | restrict model choice to the k most likely next tokens | An alternative to top_k. | LLM Output  |
 Justification | Reliability. model sticks closely to context from db, and is less likely to make stuff up | restrictive. ensures model select only the single most likely next token at each point | a p-value of 1 tells Gemini to assign temperature/top_k as primary output controller | Cost  |
+
+
+## E2E flowchart
+ ```mermaid
+flowchart TD
+    %% Creation and Ingestion Flow
+    Start[User Query] --> Script[Script Invocation<br>--create-vectors]
+    Script --> Main[main Function<br>Parse Args]
+    Main --> Check{Check --create-vectors}
+
+    Check -- Yes --> InitLC[Initialize LangChainClient]
+    InitLC --> InitDB[Create ManageVectorDb instance]
+    InitDB --> RunEmbed[run_vector_embedding]
+    RunEmbed --> LoadDocs[load_documents]
+    LoadDocs --> CreatePts[create_points_and_insert]
+    CreatePts --> GetStr[get_text_embedding_string]
+    GetStr --> GetPay[get_payload]
+    GetPay --> Upsert[upsert into Qdrant]
+
+    %% Query and Retrieval Flow
+    Upsert --> Query[User Query]
+    Query --> Handle[Handle User Query]
+    Handle --> GenEmbed[Generate Query Embedding]
+    GenEmbed --> Search[Search in Qdrant]
+    Search --> Retrieve[Retrieve Results]
+    Retrieve --> GetResp[Get Response from Documents]
+    GetResp --> LLM[LLM Response]
+
+    %% Color Styling
+    classDef ingestion fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef retrieval fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+
+    class Script,Main,Check,InitLC,InitDB,RunEmbed,LoadDocs,CreatePts,GetStr,GetPay,Upsert ingestion;
+    class Query,Handle,GenEmbed,Search,Retrieve,GetResp,LLM retrieval;
+```

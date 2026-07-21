@@ -56,7 +56,6 @@ class LLMFlow:
             ]
         )
 
-    @traceable(name="llm connection", run_type="llm")
     def _connect_to_llm(self) -> ChatGoogleGenerativeAI:
         """
         Instantiate llm connection using the chat google generative ai
@@ -71,7 +70,6 @@ class LLMFlow:
             safety_settings=self.llm_config.safety_settings,
         )
 
-    @traceable(name="build_chain", run_type="chain")
     def _build_chain(self):
         """
         Build llm chain
@@ -133,7 +131,7 @@ class ManageVectorDb:
         """
         return QdrantClient(url=url, api_key=api_key)
 
-    @traceable(name="create_collection", run_type="chain")
+    @traceable(name="create_collection", run_type="tool")
     def create_collection(self, collection_name: str, embedding_dimension: int):
         """
         Create a collection that will store all the data points
@@ -159,16 +157,25 @@ class ManageVectorDb:
     @staticmethod
     def get_text_embedding_string(record: dict) -> str:
         """
-        Get the text embedding string created by concatenating the fields
+        Build the text used for embedding from the most retrieval-relevant fields.
+
+        Chunks on: name, category/activity, equipment, muscles, description, instructions.
+        These columns are produced by the V2 JSON normalizer (and match cleaned V1 CSV).
 
         :params - record - A dictionary of a single record
         """
-        return (
-            f"Exercise Name: {record['exercise_name']} — "
-            f"Muscle Groups: {record['muscle_groups_activated']} — "
-            f"Body Part: {record['body_part']} — "
-            f"Instructions: {record['instructions']}"
-        )
+        parts = [
+            f"Exercise Name: {record.get('exercise_name', '')}",
+            f"Type of Activity: {record.get('type_of_activity', '')}",
+            f"Equipment: {record.get('type_of_equipment', '')}",
+            f"Muscle Groups: {record.get('muscle_groups_activated', '')}",
+            f"Body Part: {record.get('body_part', '')}",
+        ]
+        description = record.get("description") or ""
+        if description:
+            parts.append(f"Description: {description}")
+        parts.append(f"Instructions: {record.get('instructions', '')}")
+        return " — ".join(parts)
 
     @staticmethod
     def get_payload(record: dict, context_mapping: dict) -> dict:
@@ -180,9 +187,8 @@ class ManageVectorDb:
 
         Returns a dictionary containing the mapped field to its equivalent value from the record
         """
-        return {k: record[k] for k, v in context_mapping.items()}
+        return {k: record.get(k, "") for k in context_mapping}
 
-    @traceable(name="convert_documents_to_points", run_type="embedding")
     def convert_documents_to_points(self, document: list[dict], embedding_model: str):
         points = []
         for idx, record in enumerate(document):
@@ -199,7 +205,7 @@ class ManageVectorDb:
             points.append(point)
         return points
 
-    @traceable(name="create_points_and_insert", run_type="chain")
+    @traceable(name="create_points_and_insert", run_type="tool")
     def create_points_and_insert(self, document: list[dict], embedding_model: str):
         """
         Create vector data points from the document
@@ -226,12 +232,15 @@ class ManageVectorDb:
         insert vectors into collection
         """
 
-        data = load_data(QdrantConfig().document_location)
+        data = load_data(self.qdrant_config.document_location)
         data = clean_data(data)
         document = create_document(data)
+        logging.info(
+            f"Loaded {len(document)} exercises from {self.qdrant_config.document_location}"
+        )
 
-        # # create collection
-        vector_db = ManageVectorDb()
+        # reuse this instance for collection ops / inserts
+        vector_db = self
 
         if not vector_db.collection_exists():
             logging.info("Collection does not exist. Creating it now.")
@@ -278,7 +287,7 @@ class ManageVectorDb:
         return results
 
 
-# @traceable(name="rag-pipeline", run_type="chain")
+@traceable(name="rag-pipeline", run_type="chain")
 def rag(user_query: str, config: QdrantConfig | None = None):
     """
     Entrypoint for the RAG pipeline.
@@ -306,7 +315,6 @@ def rag(user_query: str, config: QdrantConfig | None = None):
     return rag_instance.run(query=user_query, context=context)
 
 
-@traceable(name="fitness assistant rag pipeline parser", run_type="parser")
 def main():
     """
     Using Argparser, guide the user through the RAG pipeline
