@@ -134,7 +134,10 @@ class ManageVectorDb:
     @traceable(name="create_collection", run_type="tool")
     def create_collection(self, collection_name: str, embedding_dimension: int):
         """
-        Create a collection that will store all the data points
+        Create a collection that will store all the data points.
+        Also creates keyword payload indexes on commonly filtered fields
+        (e.g. type_of_activity, body_part) so filtered queries and graph
+        visualization in the Qdrant UI work efficiently.
         """
         try:
             self.client.create_collection(
@@ -145,6 +148,22 @@ class ManageVectorDb:
                 ),
             )
             logging.info(f"Collection '{collection_name}' created successfully.")
+
+            # Create keyword payload indexes for faster filtered queries
+            for field in self.qdrant_config.payload_index_fields:
+                try:
+                    self.client.create_payload_index(
+                        collection_name=collection_name,
+                        field_name=field,
+                        field_type=models.PayloadSchemaType.KEYWORD,
+                    )
+                    logging.info(
+                        f"Created payload index on '{field}' for collection '{collection_name}'."
+                    )
+                except Exception as index_err:
+                    logging.warning(
+                        f"Could not create payload index on '{field}': {index_err}"
+                    )
         except ResponseHandlingException as e:
             raise ValueError(f"Error with Qdrant API key: {e}")
         except ValueError as e:
@@ -288,17 +307,17 @@ class ManageVectorDb:
 
 
 @traceable(name="rag-pipeline", run_type="chain")
-def rag(user_query: str, config: QdrantConfig | None = None):
+def rag(user_query: str, qdrant_config: QdrantConfig | None = None):
     """
     Entrypoint for the RAG pipeline.
     Recieves user's query, get vectors from Vector db, and return LLM response
 
     :params - user_query - Query from the user
-    :params - config -optional configuration for qdrant
+    :params - qdrant_config - optional configuration for qdrant
     """
 
-    if config:
-        vector_db = ManageVectorDb(config=config)
+    if qdrant_config:
+        vector_db = ManageVectorDb(config=qdrant_config)
     else:
         vector_db = ManageVectorDb()
 
@@ -371,7 +390,7 @@ def main():
                     "[red]⚠️ Invalid choice. Please enter 'yes' or 'no'.[/red]"
                 )
 
-    response = rag(user_query=query, config=qdrant_config)
+    response = rag(user_query=query, qdrant_config=qdrant_config)
     display_rag_response(console_instance=Console(), answer=response)
 
 

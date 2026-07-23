@@ -60,6 +60,19 @@ class QdrantConfig(BaseSettings):
         },
     )
 
+    payload_index_fields: list[str] = Field(
+        description="Payload fields to create keyword indexes on for faster filtered queries "
+        "and graph visualization. Each field gets its own independent index — "
+        "you can filter on any one field or combine multiple.",
+        default_factory=lambda: [
+            "type_of_activity",
+            "type_of_equipment",
+            "body_part",
+            "muscle_groups_activated",
+            "exercise_name",
+        ],
+    )
+
 
 class LlmConfig(BaseSettings):
     """
