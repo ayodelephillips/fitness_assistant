@@ -6,6 +6,15 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 
+class DataFileNames:
+    """
+    Constant for the files containing the relevant data
+    """
+
+    DETAILED_EXERCISE_DATASET_V1 = "detailed_exercise_dataset.csv"
+    DETAILED_EXERCISE_DATASET_V2 = "detailed_exercise_dataset_v2.json"
+
+
 class GenAIModels(str, Enum):
     gemini_2_5_flash = "gemini-2.5-flash"
     gemini_2_5_pro = "gemini-2.5-pro"
@@ -30,7 +39,7 @@ class QdrantConfig(BaseSettings):
     document_location: Path = (
         Path(__file__)
         .resolve()
-        .parent.joinpath(*["data", "detailed_exercise_dataset.csv"])
+        .parent.joinpath(*["data", DataFileNames.DETAILED_EXERCISE_DATASET_V2])
     )
     recreate_collection: bool = False
     create_vectors: bool = False  # create vector embedding
@@ -44,9 +53,24 @@ class QdrantConfig(BaseSettings):
             "body_part": "Body part",
             "type": "Exercise type",
             "muscle_groups_activated": "Muscle groups",
+            "description": "Description",
             "instructions": "Instructions",
+            "variations_on": "Variations",
             "video_link": "Video link",
         },
+    )
+
+    payload_index_fields: list[str] = Field(
+        description="Payload fields to create keyword indexes on for faster filtered queries "
+        "and graph visualization. Each field gets its own independent index — "
+        "you can filter on any one field or combine multiple.",
+        default_factory=lambda: [
+            "type_of_activity",
+            "type_of_equipment",
+            "body_part",
+            "muscle_groups_activated",
+            "exercise_name",
+        ],
     )
 
 
