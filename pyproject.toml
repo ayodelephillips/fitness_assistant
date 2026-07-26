@@ -19,6 +19,7 @@ deepeval = "^3.6.6"
 rich = "^14.2.0"
 langsmith = "^0.9.3"
 streamlit = "*"
+onnxruntime="^1.19"
 
 [tool.poetry.group.dev.dependencies]
 tqdm = "*"
