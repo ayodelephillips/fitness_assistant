@@ -133,23 +133,80 @@ pre-commit install
 
 3. Running the app
 
-i. cd into fitness_assistant/rag directory.
+### CLI Mode
 There are 2 modes for executing the llm_interface.py script.
 
-ii. To create a collection of vector embeddings, and also ask the user for his/her question
+i. To create a collection of vector embeddings, and also ask the user for his/her question
 ```bash
+cd fitness_assistant/rag
 python llm_interface.py --create-vectors
 ```
 
-iii. To run the RAG pipeline on an existing collection of vector embeddings
+ii. To run the RAG pipeline on an existing collection of vector embeddings
 ```bash
+cd fitness_assistant/rag
 python llm_interface.py
-
 ```
 
+### Streamlit Web UI (Recommended)
+A chat-based web interface built with Streamlit.
+
+```bash
+# From the project root
+poetry run streamlit run fitness_assistant/streamlit_app.py
+```
+
+The app will open in your browser at `http://localhost:8501`.
+
+**Features:**
+- Chat-style conversation with the fitness assistant
+- Expandable retrieved context for transparency
+- Sidebar with RAG explanation
+
+### Docker (Containerised Deployment)
+Build and run the Streamlit app in a container:
+
+```bash
+# Build the image
+docker build -t fitness-assistant .
+
+# Run the container (pass API keys as env vars)
+docker run -p 8501:8501 \
+  -e QDRANT_API_KEY="your-key" \
+  -e GOOGLE_API_KEY="your-key" \
+  fitness-assistant
+```
+
+## Deployment
+
+### Option 1: Streamlit Community Cloud (Free, Fastest)
+1. Push this repo to GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub
+3. Click "New app" → select this repo → branch `main` → file `fitness_assistant/streamlit_app.py`
+4. Add secrets: `QDRANT_API_KEY` and `GOOGLE_API_KEY` in the Streamlit Cloud dashboard
+5. Deploy — your app will be live at `https://<your-app>.streamlit.app`
+
+### Option 2: Container Registry + Cloud Run
+1. Build and tag the image:
+   ```bash
+   docker build -t fitness-assistant .
+   docker tag fitness-assistant ghcr.io/ayodelephillips/fitness-assistant:latest
+   ```
+2. Push to GitHub Container Registry:
+   ```bash
+   echo $GITHUB_TOKEN | docker login ghcr.io -u ayodelephillips --password-stdin
+   docker push ghcr.io/ayodelephillips/fitness-assistant:latest
+   ```
+3. Deploy to Google Cloud Run:
+   ```bash
+   gcloud run deploy fitness-assistant \
+     --image ghcr.io/ayodelephillips/fitness-assistant:latest \
+     --set-env-vars "QDRANT_API_KEY=...,GOOGLE_API_KEY=..." \
+     --allow-unauthenticated
+   ```
+
 ## Next steps
-1. Deployment
-A cloud run deployment
+1. ~~Deployment~~ ✅ Done — Streamlit Community Cloud or Cloud Run
 ![What is this](fitness_assistant/rag/data/Next_steps_Fitness_Assistant.jpg)
 
 
@@ -215,7 +272,7 @@ Each index is **independent** — you can filter on any one field or combine mul
 5. Retrieval quality [using HSNW](https://qdrant.tech/documentation/beginner-tutorials/retrieval-quality/)
 6. Increase data used for building vector db
 7. improve data quality
-8. add streamlit frontend
+8. ~~add streamlit frontend~~ ✅ Done
 9. llm-as-a-judge
 10. MCP in projects
 11. reranking(fetch about 500 from rag, then rerank to get absolute best option)
@@ -1015,3 +1072,17 @@ Search starts at the top (coarse) and drills down:
 3. Repeat until reaching the bottom level with the true nearest neighbours
 
 This gives **O(log n)** search time — even with 500,000 vectors, search takes only a few milliseconds.
+
+
+Deployment option B — Container Registry + Cloud Run:__
+
+1. `docker build -t fitness-assistant .`
+2. `docker tag ... ghcr.io/... && docker push ...`
+3. `gcloud run deploy fitness-assistant --image ghcr.io/...`
+
+### Technical details
+
+- The Streamlit app wraps your existing `rag()` function — zero refactoring of the RAG pipeline
+- Chat history is maintained in `st.session_state`
+- Retrieved context is shown in an expandable section for transparency
+- The Dockerfile uses multi-stage builds (builder → runner) for a slim final image
