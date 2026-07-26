@@ -1,0 +1,46 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+.env
+.envrc
+notebooks/
+logs/
+*.pptx
+*.ipynb
+README.md
+flowchart_readme.md
+create_rag_pptx.py
+Pipfile
+Pipfile.lock
+.pre-commit-config.yaml
+.github/
+
+# Docker
+Dockerfile
+.dockerignore
