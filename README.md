@@ -1072,3 +1072,17 @@ Search starts at the top (coarse) and drills down:
 3. Repeat until reaching the bottom level with the true nearest neighbours
 
 This gives **O(log n)** search time — even with 500,000 vectors, search takes only a few milliseconds.
+
+
+Deployment option B — Container Registry + Cloud Run:__
+
+1. `docker build -t fitness-assistant .`
+2. `docker tag ... ghcr.io/... && docker push ...`
+3. `gcloud run deploy fitness-assistant --image ghcr.io/...`
+
+### Technical details
+
+- The Streamlit app wraps your existing `rag()` function — zero refactoring of the RAG pipeline
+- Chat history is maintained in `st.session_state`
+- Retrieved context is shown in an expandable section for transparency
+- The Dockerfile uses multi-stage builds (builder → runner) for a slim final image
