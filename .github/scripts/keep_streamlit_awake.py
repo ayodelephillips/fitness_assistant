@@ -2,12 +2,16 @@
 # mypy: ignore-errors
 """Drive real browser visits to Streamlit Community Cloud apps so they stay awake.
 
-Community Cloud serves a *static SPA shell* to plain HTTP clients: the Python process
-only starts after the JavaScript bundle runs and opens a websocket to /_stcore/stream.
-A curl "ping" therefore never registers as a visit (and without a cookie jar it loops
-on Community Cloud's 303 auth redirect). This script drives headless Chromium instead,
-clicking Streamlit's "Yes, get this app back up!" button when the sleep page is showing
-and then holding the session open long enough to reset the 12-hour hibernation timer.
+Community Cloud only counts a *browser session* as a visit: the shell must run its
+JavaScript and open the websocket to /_stcore/stream before the 12-hour hibernation
+timer resets. A curl "ping" therefore never counts (and without a cookie jar curl loops
+on Community Cloud's 303 auth redirect). HTTP status codes cannot distinguish awake from
+asleep either: /_stcore/health and / both return the same ~9.8 KB static SPA shell
+whether the app is running or hibernating (verified 2026-09-29).
+
+This script drives headless Chromium instead: it loads each app, clicks Streamlit's
+"Yes, get this app back up!" button when the sleep page is showing, then waits for the
+running app shell and holds the session open so the visit registers.
 
 Playwright is installed only inside .github/workflows/keep-apps-awake.yml (not as a
 project dependency), hence the `# mypy: ignore-errors` file directive above.
@@ -15,6 +19,7 @@ project dependency), hence the `# mypy: ignore-errors` file directive above.
 
 import argparse
 import sys
+import time
 
 from playwright.sync_api import (
     Page,
@@ -36,13 +41,21 @@ WAKE_BUTTON_SELECTORS = (
     "button:has-text('get this app back up')",
 )
 
-# Modern Streamlit renders the running app under a testid; older versions used
-# .stApp / section.main. Try all of them so the check survives Streamlit version bumps.
+# Running-app markers. Community Cloud's current shell renders the app inside
+# <div id="root"><div><div class="_streamlitAppContainer_<hash>">...<iframe>, so the only
+# stable part of that class name is the CSS-module local name; the hash suffix changes
+# on every Streamlit deploy. `stAppViewContainer`/`.stApp` are kept for older Streamlit
+# builds, which the 2026-09 build no longer uses.
 RUNNING_APP_SELECTORS = (
+    "[class*='streamlitAppContainer']",
     "[data-testid='stAppViewContainer']",
     ".stApp",
-    "section.main",
 )
+RUNNING_APP_SELECTOR = ", ".join(RUNNING_APP_SELECTORS)
+
+# Opened by the app's Python process once the session starts - the very signal
+# Streamlit counts as traffic.
+STREAM_PATH = "/_stcore/stream"
 
 
 def visit(page: Page, url: str, *, hold_seconds: int, timeout_ms: int) -> bool:
@@ -50,38 +63,58 @@ def visit(page: Page, url: str, *, hold_seconds: int, timeout_ms: int) -> bool:
 
     Returns True only once the app reaches its normal running state.
     """
-    print(f"Visiting {url} ...")
+    stream_opened = False
+
+    def on_websocket(ws) -> None:
+        nonlocal stream_opened
+        if STREAM_PATH in ws.url:
+            stream_opened = True
+
+    page.on("websocket", on_websocket)
+
+    print(f"Visiting {url} ...", flush=True)
     page.goto(url, wait_until="load", timeout=120_000)
+
+    wake_button = page.locator(", ".join(WAKE_BUTTON_SELECTORS))
 
     woke = False
     for selector in WAKE_BUTTON_SELECTORS:
         button = page.locator(selector).first
         try:
             button.wait_for(state="visible", timeout=3_000)
-            print(f"WOKE {url}  (sleep page detected; clicked the wake-up button)")
+            print(
+                f"WOKE {url}  (sleep page detected; clicking the wake-up button)",
+                flush=True,
+            )
             button.click()
             woke = True
             break
         except PlaywrightTimeoutError:
             continue
 
-    try:
-        page.wait_for_selector(", ".join(RUNNING_APP_SELECTORS), timeout=timeout_ms)
-    except PlaywrightTimeoutError:
-        print(
-            f"FAILED {url}: app did not reach the running state within {timeout_ms} ms"
-        )
-        return False
+    # Wait for the running shell. The sleep page shows the wake button, so require that
+    # to be gone before trusting either marker.
+    deadline = time.monotonic() + timeout_ms / 1000
+    while time.monotonic() < deadline:
+        if wake_button.count() == 0 and (
+            stream_opened or page.locator(RUNNING_APP_SELECTOR).count() > 0
+        ):
+            if woke:
+                print(f"WOKE+RUNNING {url}  (was asleep, now running)", flush=True)
+            else:
+                print(f"RUNNING {url}  (app was already awake)", flush=True)
+            # Keep the session (websocket) alive briefly so Community Cloud registers the
+            # visit before the page is torn down.
+            page.wait_for_timeout(hold_seconds * 1000)
+            return True
+        page.wait_for_timeout(2_000)
 
-    if woke:
-        print(f"WOKE+RUNNING {url}  (was asleep, now running)")
-    else:
-        print(f"RUNNING {url}  (app was already awake)")
-
-    # Keep the websocket session alive briefly so Community Cloud registers the visit
-    # before the page is torn down.
-    page.wait_for_timeout(hold_seconds * 1000)
-    return True
+    print(
+        f"FAILED {url}: app did not reach the running state within {timeout_ms} ms "
+        f"({page.title()!r})",
+        flush=True,
+    )
+    return False
 
 
 def parse_args() -> argparse.Namespace:
@@ -112,9 +145,9 @@ def main() -> int:
             user_agent=USER_AGENT,
             viewport={"width": 1280, "height": 800},
         )
-        page = context.new_page()
         try:
             for url in args.urls:
+                page = context.new_page()
                 try:
                     ok = visit(
                         page,
@@ -122,16 +155,18 @@ def main() -> int:
                         hold_seconds=args.hold_seconds,
                         timeout_ms=args.timeout_ms,
                     )
-                except (
-                    Exception
-                ) as exc:  # isolate failures so one app can't hide the others
-                    print(f"FAILED {url}: {type(exc).__name__}: {exc}")
+                # Isolate failures: one bad app must not hide the others' verdicts.
+                except Exception as exc:
+                    print(f"FAILED {url}: {type(exc).__name__}: {exc}", flush=True)
                     ok = False
+                finally:
+                    page.close()
                 if ok:
-                    print(f"::notice::{url} is awake and running")
+                    print(f"::notice::{url} is awake and running", flush=True)
                 else:
                     print(
-                        f"::error::{url} is NOT running (visit failed or app could not be woken)"
+                        f"::error::{url} is NOT running (visit failed or app could not be woken)",
+                        flush=True,
                     )
                     exit_code = 1
         finally:

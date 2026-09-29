@@ -2,9 +2,10 @@ name: Keep Streamlit Apps Awake
 
 # WHY THIS USES A BROWSER (verified 2026-09-29) - please do not "simplify" it back to curl:
 #
-#  1. <app>.streamlit.app answers plain HTTP requests with a static SPA shell
-#     (HTTP 200, ~9.8 KB) that says "You need to enable JavaScript to run this app".
-#     /_stcore/health returns that same shell (or a 303), never "ok".
+#  1. HTTP responses cannot tell awake from asleep: / and /_stcore/health both return the
+#     same ~9.8 KB static SPA shell ("You need to enable JavaScript to run this app") in
+#     every state - measured identical for a hibernating app and a running one, and
+#     /_stcore/health never returns "ok". Only the rendered DOM differs.
 #
 #  2. Without a cookie jar, curl loops forever on the Community Cloud auth handshake
 #     (/ -> 303 -> share.streamlit.io/-/auth/app -> 303 -> /-/login?payload=... -> 303 -> /)
@@ -15,11 +16,18 @@ name: Keep Streamlit Apps Awake
 #     Server-side HTTP pings NEVER reset the hibernation timer (repo "keep-alive"
 #     commits don't either; that heartbeat only stops GitHub disabling our schedules).
 #
-#  => The old probe reported "awake and responding" for apps that were actually
-#     sleeping (see prior run logs: curl exit 47 + HTTP 303 -> ##[notice] awake).
-#     This workflow drives headless Chromium via Playwright instead: it loads each
-#     app, clicks "Yes, get this app back up!" when the sleep page is showing, and
-#     holds the session open so the visit registers.
+#  => The old curl probe reported "awake and responding" for apps that were actually
+#     sleeping (prior run logs show curl exit 47 + HTTP 303 -> ##[notice] awake).
+#     This workflow drives headless Chromium via Playwright instead: it loads each app,
+#     clicks "Yes, get this app back up!" when the sleep page is showing, waits for the
+#     running shell, and holds the session open so the visit registers.
+#
+#  Running-vs-asleep detection (2026-09 build): the sleep page shows
+#  [data-testid^="wakeup-button"]; a running app has no such button, renders
+#  #root > div > div[class*="streamlitAppContainer"] wrapping an iframe, and holds an
+#  open /_stcore/stream websocket. The older `[data-testid='stAppViewContainer']` /
+#  `.stApp` / `section.main` markers NO LONGER EXIST in that build, so checking only for
+#  them reports false failures for perfectly healthy apps.
 #
 #  NOTE: scheduled workflows only fire from the DEFAULT branch (main), so this must be
 #  merged to main to run automatically. `workflow_dispatch` also supports running it
@@ -88,7 +96,9 @@ jobs:
             readarray -t target_urls <<< "${APP_URLS}"
           fi
           echo "Visiting: ${target_urls[*]}"
-          python .github/scripts/keep_streamlit_awake.py \
+          # -u keeps the per-app WOKE/RUNNING/FAILED lines streaming into the log instead
+          # of being flushed only when the process exits.
+          python -u .github/scripts/keep_streamlit_awake.py \
             "${target_urls[@]}" \
             --hold-seconds "${HOLD_SECONDS}" \
             --timeout-ms 180000
