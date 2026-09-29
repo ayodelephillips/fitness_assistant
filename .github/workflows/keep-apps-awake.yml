@@ -1,0 +1,68 @@
+name: Keep Streamlit Apps Awake
+
+# Streamlit Community Cloud hibernates apps after 12h without traffic.
+# Probes every 4h (3 per sleep window) keep them awake even if GitHub's
+# best-effort schedule queues a run late or drops one.
+#
+# NOTE: scheduled workflows only fire from the DEFAULT branch (main), so this
+# must be merged to main to take effect automatically.
+
+on:
+  schedule:
+    - cron: "17 */4 * * *"   # every 4h UTC; :17 avoids GitHub's top-of-hour cron peak
+  workflow_dispatch: {}       # enables manual "Run workflow" for on-demand probes
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-apps-awake
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Probe ${{ matrix.url }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        url:
+          - https://phillips-fitness-assistant.streamlit.app/
+          - https://samphillipsprofile.streamlit.app/
+          # temi-phillips normalized from http:// -> https:// (Streamlit serves HTTPS and redirects)
+          - https://temi-phillips.streamlit.app/
+
+    steps:
+      - name: "Probe ${{ matrix.url }}"
+        env:
+          APP_URL: ${{ matrix.url }}
+        run: |
+          set -uo pipefail
+          body="$(mktemp)"
+          status_file="$(mktemp)"
+          trap 'rm -f "${body}" "${status_file}"' EXIT
+
+          # -L follows the http->https redirect, -w prints the HTTP status code.
+          # "|| true" keeps the script alive so failures are reported explicitly below.
+          curl -sS -L --max-time 90 -A 'github-actions/keep-apps-awake' \
+            -o "${body}" -w '%{http_code}' "${APP_URL}" > "${status_file}" || true
+          code="$(cat "${status_file}")"
+
+          echo "HTTP ${code} <- ${APP_URL}"
+          if [ "${code:-000}" = "000" ]; then
+            echo "::error::App unreachable (timeout/DNS/TLS) for ${APP_URL}"
+            exit 1
+          fi
+          if [ "${code:-000}" -ge 500 ]; then
+            echo "::error::Streamlit returned server error ${code} for ${APP_URL}"
+            exit 1
+          fi
+
+          # A sleeping Streamlit app still answers HTTP 200 with a "wake" page,
+          # so inspect the body and warn (non-fatal) if that page appears.
+          if grep -Eqi "gone to sleep|get this app back up" "${body}"; then
+            echo "::warning::${APP_URL} is showing the Streamlit sleep page - check its hibernation state"
+          else
+            echo "::notice::${APP_URL} is awake and responding"
+          fi
