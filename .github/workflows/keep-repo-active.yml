@@ -1,8 +1,13 @@
 name: Keep Repository Active
 
-# GitHub auto-disables scheduled workflows after 60 days without repository
-# activity. This workflow makes one trivial timestamped commit per month so the
-# repo (and therefore the "Keep Streamlit Apps Awake" schedule) stays active.
+# GitHub auto-disables scheduled workflows after 60 days without repository activity.
+# This workflow makes one trivial timestamped commit per month so the repo (and
+# therefore the schedules above, incl. "Keep Streamlit Apps Awake") stay enabled.
+#
+# NOTE: this repo heartbeat does NOT keep the deployed Streamlit apps awake -
+# Community Cloud's 12-hour hibernation timer is only reset by real browser sessions,
+# which the "Keep Streamlit Apps Awake" workflow drives via Playwright. See that
+# workflow for the difference.
 #
 # NOTE: scheduled workflows only fire from the DEFAULT branch (main), so this
 # must be merged to main to take effect automatically.

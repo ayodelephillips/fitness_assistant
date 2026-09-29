@@ -1,16 +1,43 @@
 name: Keep Streamlit Apps Awake
 
-# Streamlit Community Cloud hibernates apps after 12h without traffic.
-# Probes every 4h (3 per sleep window) keep them awake even if GitHub's
-# best-effort schedule queues a run late or drops one.
+# WHY THIS USES A BROWSER (verified 2026-09-29) - please do not "simplify" it back to curl:
 #
-# NOTE: scheduled workflows only fire from the DEFAULT branch (main), so this
-# must be merged to main to take effect automatically.
+#  1. <app>.streamlit.app answers plain HTTP requests with a static SPA shell
+#     (HTTP 200, ~9.8 KB) that says "You need to enable JavaScript to run this app".
+#     /_stcore/health returns that same shell (or a 303), never "ok".
+#
+#  2. Without a cookie jar, curl loops forever on the Community Cloud auth handshake
+#     (/ -> 303 -> share.streamlit.io/-/auth/app -> 303 -> /-/login?payload=... -> 303 -> /)
+#     and fails with `curl: (47) Maximum (50) redirects followed`, reporting HTTP 303.
+#
+#  3. Streamlit hibernates apps after 12h with no traffic, and only a real browser
+#     session - JavaScript + a websocket to /_stcore/stream - counts as a "visit".
+#     Server-side HTTP pings NEVER reset the hibernation timer (repo "keep-alive"
+#     commits don't either; that heartbeat only stops GitHub disabling our schedules).
+#
+#  => The old probe reported "awake and responding" for apps that were actually
+#     sleeping (see prior run logs: curl exit 47 + HTTP 303 -> ##[notice] awake).
+#     This workflow drives headless Chromium via Playwright instead: it loads each
+#     app, clicks "Yes, get this app back up!" when the sleep page is showing, and
+#     holds the session open so the visit registers.
+#
+#  NOTE: scheduled workflows only fire from the DEFAULT branch (main), so this must be
+#  merged to main to run automatically. `workflow_dispatch` also supports running it
+#  against a feature branch via: gh workflow run keep-apps-awake.yml --ref <branch>
+#  (temi-phillips is https://, normalized from http:// - Streamlit serves HTTPS
+#  and redirects).
 
 on:
   schedule:
-    - cron: "17 */3 * * *"   # every 4h UTC; :17 avoids GitHub's top-of-hour cron peak
-  workflow_dispatch: {}       # enables manual "Run workflow" for on-demand probes
+    - cron: "17 */3 * * *"   # every 3h UTC; :17 avoids GitHub's top-of-hour cron peak
+  workflow_dispatch:
+    inputs:
+      hold_seconds:
+        description: "Seconds to hold each session open (default 60)"
+        default: "60"
+      urls:
+        description: "Space-separated URLs to visit (blank = the default three)"
+        default: ""
 
 permissions:
   contents: read
@@ -20,49 +47,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  probe:
-    name: Probe ${{ matrix.url }}
+  visit:
+    name: Browser visit (wake + keep awake)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        url:
-          - https://phillips-fitness-assistant.streamlit.app/
-          - https://samphillipsprofile.streamlit.app/
-          # temi-phillips normalized from http:// -> https:// (Streamlit serves HTTPS and redirects)
-          - https://temi-phillips.streamlit.app/
-
+    timeout-minutes: 20
+    env:
+      APP_URLS: |
+        https://phillips-fitness-assistant.streamlit.app/
+        https://samphillipsprofile.streamlit.app/
+        https://temi-phillips.streamlit.app/
     steps:
-      - name: "Probe ${{ matrix.url }}"
-        env:
-          APP_URL: ${{ matrix.url }}
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-1.55.0
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright + Chromium
         run: |
-          set -uo pipefail
-          body="$(mktemp)"
-          status_file="$(mktemp)"
-          trap 'rm -f "${body}" "${status_file}"' EXIT
+          python -m pip install --upgrade pip
+          python -m pip install playwright==1.55.0
+          python -m playwright install chromium --with-deps
 
-          # -L follows the http->https redirect, -w prints the HTTP status code.
-          # "|| true" keeps the script alive so failures are reported explicitly below.
-          curl -sS -L --max-time 90 -A 'github-actions/keep-apps-awake' \
-            -o "${body}" -w '%{http_code}' "${APP_URL}" > "${status_file}" || true
-          code="$(cat "${status_file}")"
-
-          echo "HTTP ${code} <- ${APP_URL}"
-          if [ "${code:-000}" = "000" ]; then
-            echo "::error::App unreachable (timeout/DNS/TLS) for ${APP_URL}"
-            exit 1
-          fi
-          if [ "${code:-000}" -ge 500 ]; then
-            echo "::error::Streamlit returned server error ${code} for ${APP_URL}"
-            exit 1
-          fi
-
-          # A sleeping Streamlit app still answers HTTP 200 with a "wake" page,
-          # so inspect the body and warn (non-fatal) if that page appears.
-          if grep -Eqi "gone to sleep|get this app back up" "${body}"; then
-            echo "::warning::${APP_URL} is showing the Streamlit sleep page - check its hibernation state"
+      - name: Visit apps (wake them if asleep)
+        env:
+          HOLD_SECONDS: ${{ github.event.inputs.hold_seconds || '60' }}
+          URLS_INPUT: ${{ github.event.inputs.urls }}
+        run: |
+          if [ -n "${URLS_INPUT}" ]; then
+            readarray -t target_urls <<< "$(printf '%s' "${URLS_INPUT}" | tr ' ' '\n')"
           else
-            echo "::notice::${APP_URL} is awake and responding"
+            readarray -t target_urls <<< "${APP_URLS}"
           fi
+          echo "Visiting: ${target_urls[*]}"
+          python .github/scripts/keep_streamlit_awake.py \
+            "${target_urls[@]}" \
+            --hold-seconds "${HOLD_SECONDS}" \
+            --timeout-ms 180000
