@@ -34,9 +34,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # main is branch-protected (changes must come through PRs), so the heartbeat
+          # lives on the unprotected 'dev' branch instead. dev is behind main and holds
+          # no unique commits, so recreating it at main and force-pushing is safe; it
+          # stays exactly one commit ahead of main.
+          git switch -C dev
           # -f is required: .gitignore ignores *.log, and git add refuses ignored files
-          # (once tracked, later runs could use a plain add, but -f keeps this robust).
           git add -f .github/keep-alive.log
           git commit -m "chore: keep-alive heartbeat $(date -u +'%Y-%m-%d')" || echo "nothing to commit"
-          git pull --rebase --no-edit || echo "pull failed, will try push anyway"
-          git push
+          git push -f origin dev
