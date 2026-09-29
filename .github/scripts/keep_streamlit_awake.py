@@ -147,6 +147,15 @@ def main() -> int:
         )
         try:
             for url in args.urls:
+                if not url.startswith(("http://", "https://")):
+                    print(
+                        f"FAILED {url!r}: not an http(s) URL; refusing to visit it",
+                        flush=True,
+                    )
+                    print(f"::error::{url!r} is not a valid app URL", flush=True)
+                    exit_code = 1
+                    continue
+
                 page = context.new_page()
                 try:
                     ok = visit(

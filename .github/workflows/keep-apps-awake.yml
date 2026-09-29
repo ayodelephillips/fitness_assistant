@@ -91,9 +91,18 @@ jobs:
           URLS_INPUT: ${{ github.event.inputs.urls }}
         run: |
           if [ -n "${URLS_INPUT}" ]; then
-            readarray -t target_urls <<< "$(printf '%s' "${URLS_INPUT}" | tr ' ' '\n')"
+            readarray -t target_urls < <(printf '%s' "${URLS_INPUT}" | tr ' ' '\n' | grep -v '^[[:space:]]*$')
           else
-            readarray -t target_urls <<< "${APP_URLS}"
+            # APP_URLS is a YAML block scalar that ends in a trailing newline, so a plain
+            # `readarray ... <<< "${APP_URLS}"` appends an empty element to the array and
+            # hands Python a bogus "" URL - see the 2026-09-29 run that failed on
+            # "Page.goto: Cannot navigate to invalid URL" after all three apps were already
+            # reported RUNNING. Drop blank lines before visiting anything.
+            readarray -t target_urls < <(printf '%s' "${APP_URLS}" | grep -v '^[[:space:]]*$')
+          fi
+          if [ "${#target_urls[@]}" -eq 0 ]; then
+            echo "::error::No URLs provided to visit"
+            exit 1
           fi
           echo "Visiting: ${target_urls[*]}"
           # -u keeps the per-app WOKE/RUNNING/FAILED lines streaming into the log instead
