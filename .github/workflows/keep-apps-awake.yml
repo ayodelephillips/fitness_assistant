@@ -9,7 +9,7 @@ name: Keep Streamlit Apps Awake
 
 on:
   schedule:
-    - cron: "17 */4 * * *"   # every 4h UTC; :17 avoids GitHub's top-of-hour cron peak
+    - cron: "17 */3 * * *"   # every 4h UTC; :17 avoids GitHub's top-of-hour cron peak
   workflow_dispatch: {}       # enables manual "Run workflow" for on-demand probes
 
 permissions:
