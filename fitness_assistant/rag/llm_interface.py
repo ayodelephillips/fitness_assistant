@@ -19,6 +19,13 @@ from rich.prompt import Prompt
 from rich.logging import RichHandler
 from langsmith import traceable
 import logging
+import os
+
+# Silence the cosmetic huggingface_hub symlink warning on Windows. FastEmbed
+# falls back to copying files when symlinks are unavailable (WinError 1314) and
+# that fallback works, so the warning is pure noise. Must run before any model
+# download, so it is set here at import time rather than via .env.
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 # logging.basicConfig(level=logging.INFO)
 logging.basicConfig(

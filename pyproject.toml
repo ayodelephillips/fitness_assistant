@@ -10,7 +10,7 @@ python = "^3.12"
 pandas = "2.2.3"
 langchain = "*"
 langchain-community = "*"
-qdrant-client = {version = ">=1.15.1", extras = ["fastembed"]}
+qdrant-client = {version = ">=1.18,<2", extras = ["fastembed"]}
 huggingface-hub = {version = "*", extras = ["hf_xet"]}
 langchain-google-genai = "^2.1.12"
 langchain-core = "^0.3.78"
