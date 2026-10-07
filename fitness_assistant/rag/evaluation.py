@@ -13,6 +13,7 @@ from fitness_assistant.rag.llm_interface import ManageVectorDb, LLMFlow
 from fitness_assistant.rag.helper import format_vector_db_context
 from fitness_assistant.rag.settings import LlmConfig, GenAIModels
 from deepeval.models import GeminiModel
+from langsmith import traceable
 import time
 
 import logging
@@ -69,6 +70,7 @@ class RagEvaluator:
         self.vector_db = ManageVectorDb()
         self.llm_flow = LLMFlow()
 
+    @traceable(name="eval-rag-pipeline", run_type="chain")
     def run_pipeline(self, query: str) -> Dict[str, Any]:
         """
         Executes the full RAG pipeline: search, format, and generate.
