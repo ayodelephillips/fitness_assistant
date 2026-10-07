@@ -1,10 +1,12 @@
 """Streamlit frontend for the Fitness Assistant RAG system."""
 
 import streamlit as st
+from langsmith import traceable
 from fitness_assistant.rag.llm_interface import ManageVectorDb, LLMFlow
 from fitness_assistant.rag.helper import format_vector_db_context
 
 
+@traceable(name="streamlit-rag-pipeline", run_type="chain")
 def run_rag_pipeline(query: str) -> tuple[str, str]:
     """Run the full RAG pipeline and return (context, answer).
 
