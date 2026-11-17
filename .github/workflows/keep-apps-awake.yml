@@ -65,31 +65,36 @@ jobs:
         https://samphillipsprofile.streamlit.app/
         https://temi-phillips.streamlit.app/
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-1.55.0
+          key: playwright-${{ runner.os }}-1.58.0
           restore-keys: |
             playwright-${{ runner.os }}-
 
       - name: Install Playwright + Chromium
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install playwright==1.55.0
-          python -m playwright install chromium --with-deps
+          python -m pip install playwright==1.58.0
+          python -m playwright install chromium --with-deps || {
+            echo "::warning::Failed to install Chromium system dependencies with --with-deps, retrying without."
+            python -m playwright install chromium
+          }
 
       - name: Visit apps (wake them if asleep)
         env:
           HOLD_SECONDS: ${{ github.event.inputs.hold_seconds || '60' }}
           URLS_INPUT: ${{ github.event.inputs.urls }}
         run: |
+          set -euo pipefail
           if [ -n "${URLS_INPUT}" ]; then
             readarray -t target_urls < <(printf '%s' "${URLS_INPUT}" | tr ' ' '\n' | grep -v '^[[:space:]]*$')
           else
