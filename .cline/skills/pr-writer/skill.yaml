@@ -1,5 +1,5 @@
 name: pr-writer
-description: "Generate a conventional, easy-to-understand PR description that documents TDD approach and best practices"
+description: "Generate a conventional, easy-to-understand PR description in plain English"
 version: "1.0.0"
 inputs:
   - name: base_branch
@@ -38,51 +38,6 @@ templates:
     {{#each changed_files}}
     - `{{ this.path }}` ({{ this.status }}): {{ this.description }}
     {{/each}}
-
-    ## TDD Approach
-
-    Tests were written before implementation to ensure:
-    - Every new feature has corresponding test coverage
-    - Edge cases are captured in unit tests
-    - Refactoring can be done with confidence
-
-    ### Test Files
-
-    {{#each test_files}}
-    - `{{ this }}`
-    {{/each}}
-
-    ## Best Practices Applied
-
-    - **Type hints**: All public functions include type annotations
-    - **Docstrings**: All modules, classes, and public methods documented
-    - **Error handling**: Specific exception types caught, no bare `except`
-    - **Safety settings**: LLM safety thresholds configured (see `settings.py`)
-    - **No secrets committed**: API keys and tokens excluded from version control
-    - **Input validation**: User inputs validated before processing
-
-    ## Pre-Merge Checklist
-
-    - [ ] All unit tests pass (`poetry run pytest`)
-    - [ ] Pre-commit hooks pass (`pre-commit run --all-files`)
-    - [ ] Streamlit app boots successfully (smoke test)
-    - [ ] No sensitive data (API keys, tokens) in committed files
-    - [ ] Tests written for all new functionality (TDD)
-    - [ ] Documentation updated if user-facing behavior changed
-
-    ## Testing
-
-    Run the test suite before merging:
-
-    ```bash
-    poetry run pytest
-    ```
-
-    Run pre-commit checks:
-
-    ```bash
-    pre-commit run --all-files
-    ```
 
     ---
 
