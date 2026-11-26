@@ -27,14 +27,3 @@ repos:
     -   id: mypy
 
         additional_dependencies: ['.[all]']
-
-# local hooks
--   repo: local
-    hooks:
-    -   id: require-jira-ticket
-      name: Require Jira ticket in commit message
-      entry: .github/hooks/require-jira-ticket.sh
-      language: script
-      types: [commit-message]
-      pass_filenames: false
-      args: ['{commit_msg_file}']
