@@ -1,0 +1,37 @@
+name: deploy-check
+description: "Validate deploy readiness and post results to Jira"
+version: "1.0.0"
+inputs:
+  - name: environment
+    type: string
+    required: true
+    description: "Target environment (e.g., staging, production)"
+  - name: jira_issue_key
+    type: string
+    required: true
+    description: "Jira issue key to post deploy status to"
+  - name: test_results
+    type: string
+    required: true
+    description: "Summary of test results (pass/fail counts)"
+  - name: deploy_url
+    type: string
+    required: false
+    description: "URL of the deployed application"
+steps:
+  - tool: JIRA_ADD_COMMENT
+    args:
+      issue_key: "{{ inputs.jira_issue_key }}"
+      body: |
+        🚀 Deploy Check: {{ inputs.environment }}
+        
+        Test Results: {{ inputs.test_results }}
+        {{#if inputs.deploy_url}}
+        Deploy URL: {{ inputs.deploy_url }}
+        {{/if}}
+        
+        Status: ✅ Ready for deployment
+outputs:
+  - name: comment_id
+    description: "The ID of the created comment"
+    from: "result.data.id"

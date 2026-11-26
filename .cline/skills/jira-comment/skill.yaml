@@ -1,0 +1,27 @@
+name: jira-comment
+description: "Add a comment to a Jira issue"
+version: "1.0.0"
+inputs:
+  - name: issue_key
+    type: string
+    required: true
+    description: "Jira issue key (e.g., PROJ-123)"
+  - name: comment
+    type: string
+    required: true
+    description: "Comment text to post"
+  - name: visibility
+    type: string
+    required: false
+    default: "default"
+    description: "Comment visibility: default, group, or role"
+steps:
+  - tool: JIRA_ADD_COMMENT
+    args:
+      issue_key: "{{ inputs.issue_key }}"
+      body: "{{ inputs.comment }}"
+      visibility: "{{ inputs.visibility }}"
+outputs:
+  - name: comment_id
+    description: "The ID of the created comment"
+    from: "result.data.id"
