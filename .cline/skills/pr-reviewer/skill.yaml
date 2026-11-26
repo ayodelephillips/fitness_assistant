@@ -1,0 +1,68 @@
+name: pr-reviewer
+description: "Review code on the current branch for TDD compliance, best practices, and LLM safety"
+version: "1.0.0"
+inputs:
+  - name: branch
+    type: string
+    required: false
+    default: "HEAD"
+    description: "The branch to review (default: current HEAD)"
+  - name: base_branch
+    type: string
+    required: false
+    default: "main"
+    description: "The base branch to compare against (default: main)"
+steps:
+  - tool: git_diff_files
+    args:
+      base: "{{ inputs.base_branch }}"
+      feature: "{{ inputs.branch }}"
+  - tool: file_contents
+    args:
+      paths: "{{ changed_source_files }}"
+outputs:
+  - name: review_report
+    description: "Structured code review report"
+    from: "result.data.review_report"
+review_checklist:
+  - id: tdd_coverage
+    name: "TDD: Test exists for each source file"
+    severity: "high"
+    check: "For every file under fitness_assistant/, a corresponding test file exists under tests/"
+  - id: type_hints
+    name: "Type hints on public functions"
+    severity: "medium"
+    check: "All public functions and methods include type annotations"
+  - id: docstrings
+    name: "Module and function docstrings"
+    severity: "medium"
+    check: "All modules, classes, and public methods have docstrings"
+  - id: no_bare_except
+    name: "No bare except clauses"
+    severity: "high"
+    check: "Exception handling uses specific exception types, not bare `except:`"
+  - id: no_prints_in_library
+    name: "No print() statements in library code"
+    severity: "low"
+    check: "Library modules use logging, not print()"
+  - id: llm_safety_settings
+    name: "LLM safety settings configured"
+    severity: "high"
+    check: "`settings.py` defines safety_settings with appropriate HarmBlockThreshold values"
+  - id: prompt_constraints
+    name: "System prompt constrains output to context"
+    severity: "high"
+    check: "LLM system prompt instructs model to use only CONTEXT, not external knowledge"
+  - id: no_secrets
+    name: "No secrets committed"
+    severity: "critical"
+    check: "No API keys, tokens, or passwords in committed files"
+outputs_detail:
+  - name: passed
+    description: "List of checklist items that passed"
+  - name: failed
+    description: "List of checklist items that failed with file:line references"
+  - name: warnings
+    description: "List of warnings (non-blocking issues)"
+  - name: overall_verdict
+    description: "APPROVE, REQUEST_CHANGES, or COMMENT"
