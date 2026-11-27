@@ -12,6 +12,10 @@ inputs:
     required: false
     default: "HEAD"
     description: "The branch being merged from (default: current HEAD)"
+  - name: feature_description
+    type: string
+    required: true
+    description: "Plain English summary of what this PR does"
 steps:
   - tool: git_diff_stat
     args:
@@ -29,14 +33,12 @@ templates:
   pr_body: |
     ## Summary
 
-    {{#if feature_description}}
-    {{ feature_description }}
-    {{/if}}
+    {{ inputs.feature_description }}
 
     ### Changes
 
     {{#each changed_files}}
-    - `{{ this.path }}` ({{ this.status }}): {{ this.description }}
+    - `{{ this.path }}` ({{ this.status }})
     {{/each}}
 
     ---
